@@ -1,0 +1,32 @@
+{
+  "app": {
+    "name": "App Marketing",
+    "skipToContent": "Aller au contenu principal",
+    "devMode": "Mode développement"
+  },
+  "language": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
+  "login": {
+    "title": "Connexion",
+    "description": "Choisissez l'organisation à utiliser. La vraie connexion arrivera avec la gestion des comptes.",
+    "organizationLabel": "Identifiant de l'organisation",
+    "organizationHint": "Lancez « pnpm db:seed » pour créer des organisations de démonstration et afficher leurs identifiants.",
+    "invalidOrganization": "Saisissez un identifiant valide (format UUID).",
+    "submit": "Continuer"
+  },
+  "posts": {
+    "title": "Publications",
+    "organization": "Organisation : {{id}}",
+    "signOut": "Changer d'organisation",
+    "loading": "Chargement des publications…",
+    "empty": "Aucune publication pour l'instant.",
+    "error": "Impossible de charger les publications.",
+    "retry": "Réessayer",
+    "loadMore": "Charger plus",
+    "loadingMore": "Chargement…",
+    "updatedAt": "Modifiée le {{date}}"
+  }
+}

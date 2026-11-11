@@ -230,14 +230,15 @@ pnpm install
 pnpm infra:up       # postgres, valkey, rustfs (attend qu'ils soient healthy) ; infra:down, infra:reset, infra:logs, infra:ps
 pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
-pnpm dev            # api (http://127.0.0.1:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env ; web à venir
+pnpm dev            # web (http://localhost:5173) + api (:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env
+pnpm db:seed        # organisations de démonstration (ids fixes, affichés) pour se connecter sur le web
 pnpm db:migrate     # applique les migrations (schéma + RLS) — copier packages/db/.env.example → .env
 pnpm db:migrate:dev # crée une migration depuis schema.prisma (RLS : migration --create-only éditée à la main)
 pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, non versionné)
 pnpm typecheck
 pnpm lint
 pnpm test           # unitaires + intégration (Testcontainers)
-pnpm e2e            # Playwright
+pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : pnpm --filter @app/web exec playwright install chromium
 ```
 
 ---
@@ -265,7 +266,9 @@ pnpm e2e            # Playwright
   (transition conditionnelle + `publish_attempts` unique `(target_id, attempt_no)` dans la même transaction ;
   bail `PUBLISH_LEASE_SECONDS` : cible bloquée en publication → `unknown_outcome`, jamais republiée à l'aveugle — ADR 005)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
-- [ ] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
+- [x] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
+  (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
+  routes déclarées en code (pas de fichier généré) ; E2E Playwright + axe WCAG 2.2 AA en CI)
 
 **Après la phase 0 (ordre du MVP)** : auth et multi-tenancy complets (Better Auth ; remplace la résolution provisoire de `TenantGuard`, ADR 003) → moteur de publication + adaptateurs Meta →
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.

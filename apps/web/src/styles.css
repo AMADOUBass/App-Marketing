@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@app/ui/styles.css';
+
+/* Shared components live in packages/ui: let Tailwind find their classes. */
+@source '../../../packages/ui/src';

@@ -22,7 +22,14 @@
       // Testcontainers needs to reach the Docker daemon.
       "passThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"]
     },
+    "e2e": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      // Playwright browser location and CI flag.
+      "passThroughEnv": ["CI", "PLAYWRIGHT_*"]
+    },
     "dev": {
+      "dependsOn": ["^build", "generate"],
       "cache": false,
       "persistent": true
     }

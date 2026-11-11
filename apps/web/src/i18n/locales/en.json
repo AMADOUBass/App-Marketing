@@ -1,0 +1,32 @@
+{
+  "app": {
+    "name": "App Marketing",
+    "skipToContent": "Skip to main content",
+    "devMode": "Development mode"
+  },
+  "language": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "Choose the organization to use. Real sign-in will come with account management.",
+    "organizationLabel": "Organization ID",
+    "organizationHint": "Run “pnpm db:seed” to create demo organizations and print their IDs.",
+    "invalidOrganization": "Enter a valid ID (UUID format).",
+    "submit": "Continue"
+  },
+  "posts": {
+    "title": "Posts",
+    "organization": "Organization: {{id}}",
+    "signOut": "Switch organization",
+    "loading": "Loading posts…",
+    "empty": "No posts yet.",
+    "error": "Could not load posts.",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "loadingMore": "Loading…",
+    "updatedAt": "Updated {{date}}"
+  }
+}

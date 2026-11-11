@@ -1,6 +1,7 @@
 // @ts-check
 import js from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -10,14 +11,16 @@ import tseslint from 'typescript-eslint';
  * @param {object} options
  * @param {string} options.tsconfigRootDir Directory of the package's tsconfig.json (pass `import.meta.dirname`).
  * @param {'node' | 'browser'} [options.env] Runtime globals to expose. Defaults to `node`.
+ * @param {boolean} [options.react] Adds the React hooks rules (web app and UI components).
  */
-export function createConfig({ tsconfigRootDir, env = 'node' }) {
+export function createConfig({ tsconfigRootDir, env = 'node', react = false }) {
   return defineConfig(
     globalIgnores(['**/dist/**', '**/coverage/**', '**/.turbo/**', '**/node_modules/**']),
 
     js.configs.recommended,
     tseslint.configs.strictTypeChecked,
     tseslint.configs.stylisticTypeChecked,
+    ...(react ? [reactHooks.configs.flat.recommended] : []),
 
     {
       languageOptions: {

@@ -16,6 +16,11 @@ cp packages/db/.env.example packages/db/.env
 cp apps/worker/.env.example apps/worker/.env
 pnpm infra:up      # PostgreSQL, Valkey, RustFS
 pnpm db:migrate    # schéma + row-level security
-pnpm dev           # API sur http://127.0.0.1:3000/api/v1/health
+pnpm db:seed       # organisations de démonstration (affiche leurs identifiants)
+pnpm dev           # web http://localhost:5173 · API http://127.0.0.1:3000/api/v1/health · worker
 pnpm check         # format + types + lint + tests (comme la CI)
+pnpm e2e           # tests navigateur (Playwright + accessibilité axe)
 ```
+
+Sur le web, la connexion est provisoire (mode développement, ADR 003) : collez l'identifiant d'une
+organisation affiché par `pnpm db:seed`.
