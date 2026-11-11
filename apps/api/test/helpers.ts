@@ -1,8 +1,18 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { inject } from 'vitest';
 import { createApp } from '../src/app.js';
 import { type Env, parseEnv } from '../src/config/env.js';
 
-export const testEnv: Env = parseEnv({ NODE_ENV: 'test', LOG_LEVEL: 'info' });
+/** Test environment: real test database, dev tenant header enabled. */
+export function createTestEnv(overrides: Record<string, string> = {}): Env {
+  return parseEnv({
+    NODE_ENV: 'test',
+    LOG_LEVEL: 'info',
+    DATABASE_URL: inject('databaseUrl'),
+    DEV_TENANT_HEADER: 'true',
+    ...overrides,
+  });
+}
 
 /** In-memory log sink: each entry is one parsed pino JSON line. */
 export function createLogCapture() {
@@ -19,9 +29,10 @@ export function createLogCapture() {
 }
 
 export async function createTestApp(
-  options: Parameters<typeof createApp>[1] = {},
+  options: Parameters<typeof createApp>[1] & { env?: Env } = {},
 ): Promise<NestFastifyApplication> {
-  const app = await createApp(testEnv, options);
+  const { env = createTestEnv(), ...appOptions } = options;
+  const app = await createApp(env, appOptions);
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   return app;

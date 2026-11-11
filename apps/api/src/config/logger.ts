@@ -2,7 +2,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Params } from 'nestjs-pino';
 import type { DestinationStream } from 'pino';
 import type { Options } from 'pino-http';
-import { HEALTH_PATH } from '../common/paths.js';
+import { isHealthPath } from '../common/paths.js';
 import type { Env } from './env.js';
 
 /** Request/response fields that may carry credentials. Never written to logs. */
@@ -51,7 +51,7 @@ export function createLoggerParams(env: Env, stream?: DestinationStream): Params
     // Defense in depth if a request object is ever logged by other means.
     redact: { paths: REDACTED_PATHS, censor: '[REDACTED]' },
     // Health probes run every few seconds; logging them only adds noise.
-    autoLogging: { ignore: (req) => requestPath(req) === HEALTH_PATH },
+    autoLogging: { ignore: (req) => isHealthPath(requestPath(req)) },
     ...(env.LOG_PRETTY && !stream
       ? { transport: { target: 'pino-pretty', options: { singleLine: true } } }
       : {}),

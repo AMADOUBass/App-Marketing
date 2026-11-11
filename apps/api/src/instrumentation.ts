@@ -4,7 +4,7 @@ import { register } from 'node:module';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { HEALTH_PATH } from './common/paths.js';
+import { isHealthPath } from './common/paths.js';
 
 if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
   // ESM apps need this loader hook so instrumentations can patch imported packages.
@@ -17,7 +17,7 @@ if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
     serviceName: process.env.OTEL_SERVICE_NAME ?? 'app-api',
     instrumentations: [
       new HttpInstrumentation({
-        ignoreIncomingRequestHook: (req) => req.url === HEALTH_PATH,
+        ignoreIncomingRequestHook: (req) => isHealthPath(req.url),
       }),
       // Adds trace_id / span_id to every log line.
       new PinoInstrumentation(),

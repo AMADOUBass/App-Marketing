@@ -250,15 +250,16 @@ pnpm e2e            # Playwright
 - [x] 0.3 `apps/api` NestJS 12 + Fastify, route `/api/v1/health`, logs pino, OpenTelemetry minimal (ADR 002)
 - [x] 0.4 `packages/db` : Prisma 7, tables `organizations`, `workspaces`, `memberships`, `posts` ; migration SQL RLS ; helper `withTenant`
   (isolation testée au niveau base avec Testcontainers ; `test/rls-coverage.test.ts` fait échouer toute nouvelle table sans RLS)
-- [ ] 0.5 Test d'isolation : l'organisation A ne peut ni lire ni écrire les données de B (doit renvoyer 0 ligne / 404)
-  — reste à faire côté API : route `GET /api/v1/posts/:id` → 404 pour une autre organisation, santé de la base dans `/health`
+- [x] 0.5 Test d'isolation : l'organisation A ne peut ni lire ni écrire les données de B (doit renvoyer 0 ligne / 404)
+  — base (Testcontainers) et API (`GET/PATCH /api/v1/posts/:id` → 404 identique à « inexistant ») ; `/api/v1/health/ready` ;
+  organisation provisoire par en-tête `x-dev-organization-id` derrière `DEV_TENANT_HEADER`, interdit en production (ADR 003)
 - [ ] 0.6 Vérifier si TypeScript 7 fonctionne avec les décorateurs NestJS ; sinon rester sur TS 6 → noter la décision dans un ADR
 - [ ] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
 - [ ] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
 - [ ] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
 
-**Après la phase 0 (ordre du MVP)** : auth et multi-tenancy complets (Better Auth) → moteur de publication + adaptateurs Meta →
+**Après la phase 0 (ordre du MVP)** : auth et multi-tenancy complets (Better Auth ; remplace la résolution provisoire de `TenantGuard`, ADR 003) → moteur de publication + adaptateurs Meta →
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.
 
 **En parallèle, hors code** : nom du produit, entreprise enregistrée, domaine, politique de confidentialité,

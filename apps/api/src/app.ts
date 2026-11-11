@@ -1,4 +1,4 @@
-import { VersioningType } from '@nestjs/common';
+import { StandardSchemaValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from 'nestjs-pino';
@@ -22,6 +22,8 @@ export async function createApp(
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix(API_PREFIX);
   app.enableVersioning({ type: VersioningType.URI }); // -> /api/v1/...
+  // Validates @Param/@Query/@Body against their Zod schema (`{ schema }` option); 400 on failure.
+  app.useGlobalPipes(new StandardSchemaValidationPipe());
   app.enableShutdownHooks();
 
   return app;

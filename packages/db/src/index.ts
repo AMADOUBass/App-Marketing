@@ -1,4 +1,4 @@
-export { createDb, InvalidOrganizationIdError } from './tenant.js';
+export { createDb, DatabaseUnavailableError, InvalidOrganizationIdError } from './tenant.js';
 export type { Db, DbOptions, TenantTx } from './tenant.js';
 export type {
   Membership,
