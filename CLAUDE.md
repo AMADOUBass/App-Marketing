@@ -107,7 +107,7 @@ draft → pending_approval → scheduled → queued → publishing → published
 erreurs : retrying | failed | needs_action | unknown_outcome → reconciled | cancelled
 ```
 
-- Contrainte unique `(post_id, social_account_id)` ; jobId BullMQ = `${targetId}:${attemptNo}`.
+- Contrainte unique `(post_id, social_account_id)` ; jobId BullMQ = `${targetId}_${attemptNo}` (BullMQ 6 refuse un `:` seul — ADR 005).
 - Timeout après l'appel de publication → `unknown_outcome` → **réconciliation avant toute nouvelle tentative**.
 - Erreurs classées : `transient`, `quota`, `auth`, `content`, `unknown`. Seules `transient` et `quota` sont réessayées (backoff exponentiel + gigue).
 - Chaque tentative est journalisée dans `publish_attempts` (requête/réponse assainies).
@@ -117,6 +117,9 @@ erreurs : retrying | failed | needs_action | unknown_outcome → reconciled | ca
 - Le scheduler (une instance active, verrou de leader) tourne toutes les 10 s :
   `SELECT … WHERE state='scheduled' AND scheduled_at < now() + interval '60 seconds' FOR UPDATE SKIP LOCKED`,
   passe la cible en `queued`, met le job en file avec le délai exact.
+- Cette requête inter-organisations passe **uniquement** par les fonctions `SECURITY DEFINER`
+  `claim_due_publication_targets()` / `requeue_stale_publication_targets()` (rôle NOLOGIN `app_scheduler`,
+  identifiants seulement) ; le job repasse par `withTenant`. Toute autre exception au RLS fait échouer la CI (ADR 005).
 - Contrôle 15 min avant l'heure : jeton, permissions, quota restant, conformité du média.
 
 ### Événements
@@ -227,7 +230,7 @@ pnpm install
 pnpm infra:up       # postgres, valkey, rustfs (attend qu'ils soient healthy) ; infra:down, infra:reset, infra:logs, infra:ps
 pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
-pnpm dev            # api en watch sur http://127.0.0.1:3000 (copier apps/api/.env.example → .env) ; worker et web à venir
+pnpm dev            # api (http://127.0.0.1:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env ; web à venir
 pnpm db:migrate     # applique les migrations (schéma + RLS) — copier packages/db/.env.example → .env
 pnpm db:migrate:dev # crée une migration depuis schema.prisma (RLS : migration --create-only éditée à la main)
 pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, non versionné)
@@ -255,7 +258,9 @@ pnpm e2e            # Playwright
   organisation provisoire par en-tête `x-dev-organization-id` derrière `DEV_TENANT_HEADER`, interdit en production (ADR 003)
 - [x] 0.6 Vérifier si TypeScript 7 fonctionne avec les décorateurs NestJS ; sinon rester sur TS 6 → noter la décision dans un ADR
   (TS 7 OK pour le code et les décorateurs, mais on reste sur TS 6 à cause de typescript-eslint et du CLI Nest — ADR 004)
-- [ ] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
+- [x] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
+  (tables `social_accounts`, `publication_targets` ; verrou de leader Valkey ; récupération des jobs perdus ;
+  sans adaptateur → `needs_action` ; `app_migrator` a BYPASSRLS pour les migrations — ADR 005)
 - [ ] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
 - [ ] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)

@@ -13,6 +13,7 @@ pnpm install
 cp infra/compose/.env.example infra/compose/.env   # optionnel : changer les ports / mots de passe
 cp apps/api/.env.example apps/api/.env
 cp packages/db/.env.example packages/db/.env
+cp apps/worker/.env.example apps/worker/.env
 pnpm infra:up      # PostgreSQL, Valkey, RustFS
 pnpm db:migrate    # schéma + row-level security
 pnpm dev           # API sur http://127.0.0.1:3000/api/v1/health

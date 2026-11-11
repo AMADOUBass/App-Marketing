@@ -70,6 +70,30 @@ describe('row-level security coverage', () => {
     }
   });
 
+  it('cross-organization policies are limited to the reviewed scheduler exceptions (ADR 005)', async () => {
+    const allowed: Record<string, string[]> = {
+      publication_targets: ['scheduler_queue', 'scheduler_read', 'tenant_isolation'],
+    };
+    for (const info of await publicTables()) {
+      expect([...info.policies].sort(), info.table).toEqual(
+        allowed[info.table] ?? ['tenant_isolation'],
+      );
+    }
+  });
+
+  it('SECURITY DEFINER functions are limited to the reviewed scheduler functions (ADR 005)', async () => {
+    const { rows } = await client.query<{ name: string; owner: string }>(`
+      SELECT p.proname AS name, pg_get_userbyid(p.proowner) AS owner
+      FROM pg_proc p
+      WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+      ORDER BY p.proname`);
+
+    expect(rows).toEqual([
+      { name: 'claim_due_publication_targets', owner: 'app_scheduler' },
+      { name: 'requeue_stale_publication_targets', owner: 'app_scheduler' },
+    ]);
+  });
+
   it('the runtime role cannot bypass RLS nor read the migration history', async () => {
     const { rows } = await client.query<{ bypass: boolean; canReadMigrations: boolean }>(`
       SELECT r.rolbypassrls AS bypass,

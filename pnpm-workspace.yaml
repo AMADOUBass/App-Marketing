@@ -8,6 +8,7 @@ packages:
 # prisma: script only checks the Node version.
 # @prisma/engines: downloads the schema engine; the Prisma CLI also fetches it on first use.
 # cpu-features, ssh2: optional native SSH speed-ups pulled in by Testcontainers (unused).
+# msgpackr-extract: optional native speed-up for BullMQ's msgpackr (falls back to JavaScript).
 allowBuilds:
   '@swc/core': false
   protobufjs: false
@@ -15,6 +16,7 @@ allowBuilds:
   '@prisma/engines': false
   cpu-features: false
   ssh2: false
+  msgpackr-extract: false
 
 # Refuse to install with a Node/pnpm version outside "engines".
 engineStrict: true

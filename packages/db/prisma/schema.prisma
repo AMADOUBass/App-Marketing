@@ -29,9 +29,11 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  workspaces  Workspace[]
-  memberships Membership[]
-  posts       Post[]
+  workspaces         Workspace[]
+  memberships        Membership[]
+  posts              Post[]
+  socialAccounts     SocialAccount[]
+  publicationTargets PublicationTarget[]
 
   @@map("organizations")
 }
@@ -45,8 +47,9 @@ model Workspace {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  posts        Post[]
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts          Post[]
+  socialAccounts SocialAccount[]
 
   @@unique([organizationId, id])
   @@map("workspaces")
@@ -75,11 +78,89 @@ model Post {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // Composite key: a post can only belong to a workspace of the same organization.
-  workspace    Workspace    @relation(fields: [organizationId, workspaceId], references: [organizationId, id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [organizationId, workspaceId], references: [organizationId, id], onDelete: Cascade)
+  targets      PublicationTarget[]
 
   @@unique([organizationId, id])
   @@index([organizationId, workspaceId])
   @@map("posts")
+}
+
+enum Platform {
+  facebook
+  instagram
+  threads
+  youtube
+  linkedin
+  tiktok
+
+  @@map("platform")
+}
+
+/// A connected social account (page, profile, channel). OAuth tokens live elsewhere, encrypted (0.9).
+model SocialAccount {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  platform          Platform
+  /// Account id on the platform (e.g. Instagram professional account id).
+  externalAccountId String   @map("external_account_id")
+  displayName       String   @map("display_name")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [organizationId, workspaceId], references: [organizationId, id], onDelete: Cascade)
+  targets      PublicationTarget[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, platform, externalAccountId])
+  @@map("social_accounts")
+}
+
+/// Lifecycle of one post on one social account (CLAUDE.md section 5).
+enum PublicationState {
+  draft
+  pending_approval
+  scheduled
+  queued
+  publishing
+  uploading
+  remote_processing
+  published
+  retrying
+  failed
+  needs_action
+  unknown_outcome
+  reconciled
+  cancelled
+
+  @@map("publication_state")
+}
+
+/// Unit of execution: one post x one social account.
+model PublicationTarget {
+  id              String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId  String           @map("organization_id") @db.Uuid
+  postId          String           @map("post_id") @db.Uuid
+  socialAccountId String           @map("social_account_id") @db.Uuid
+  state           PublicationState @default(draft)
+  scheduledAt     DateTime?        @map("scheduled_at") @db.Timestamptz(6)
+  /// Set when the scheduler hands the target to the queue.
+  queuedAt        DateTime?        @map("queued_at") @db.Timestamptz(6)
+  /// Incremented on each hand-off to the queue; part of the job id.
+  attemptCount    Int              @default(0) @map("attempt_count")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  post          Post          @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [organizationId, socialAccountId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([organizationId, id])
+  /// A post can target a social account only once (no double publication).
+  @@unique([postId, socialAccountId])
+  @@map("publication_targets")
 }

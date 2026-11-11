@@ -9,7 +9,8 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 // Same image and role bootstrap script as infra/compose, so tests run against the real setup.
 const POSTGRES_IMAGE = 'postgres:18.6-alpine3.24';
 const PACKAGE_ROOT = resolve(import.meta.dirname, '..');
-const ROLES_SCRIPT = resolve(PACKAGE_ROOT, '../../infra/compose/postgres/init/01-roles.sh');
+const INIT_DIR = resolve(PACKAGE_ROOT, '../../infra/compose/postgres/init');
+const INIT_SCRIPTS = ['01-roles.sh', '02-scheduler-role.sh'];
 const PASSWORDS = { migrator: 'migrator_test', appUser: 'app_user_test' };
 
 export interface TestDatabase {
@@ -27,9 +28,13 @@ export async function startTestDatabase(): Promise<TestDatabase> {
       APP_MIGRATOR_PASSWORD: PASSWORDS.migrator,
       APP_USER_PASSWORD: PASSWORDS.appUser,
     })
-    .withCopyFilesToContainer([
-      { source: ROLES_SCRIPT, target: '/docker-entrypoint-initdb.d/01-roles.sh', mode: 0o755 },
-    ])
+    .withCopyFilesToContainer(
+      INIT_SCRIPTS.map((name) => ({
+        source: resolve(INIT_DIR, name),
+        target: `/docker-entrypoint-initdb.d/${name}`,
+        mode: 0o755,
+      })),
+    )
     .start();
 
   const address = `${container.getHost()}:${String(container.getPort())}`;

@@ -4,6 +4,8 @@
 # Roles:
 #   app_migrator  owns the database and schema; runs Prisma Migrate and the SQL migrations (RLS).
 #                 CREATEDB is needed for Prisma's shadow database in development.
+#                 BYPASSRLS: migrations must validate foreign keys and backfill data across tenants.
+#                 Never used by the running application.
 #   app_user      role used by api and worker at runtime. NOT superuser, NOT owner, NO BYPASSRLS:
 #                 row-level security always applies to it.
 set -eu
@@ -13,7 +15,7 @@ psql -v ON_ERROR_STOP=1 \
   -v db_name="$APP_DB_NAME" \
   -v migrator_password="$APP_MIGRATOR_PASSWORD" \
   -v app_password="$APP_USER_PASSWORD" <<'SQL'
-CREATE ROLE app_migrator LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE CREATEDB
+CREATE ROLE app_migrator LOGIN NOSUPERUSER BYPASSRLS NOCREATEROLE CREATEDB
   PASSWORD :'migrator_password';
 CREATE ROLE app_user LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOINHERIT
   PASSWORD :'app_password';
