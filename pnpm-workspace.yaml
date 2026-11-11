@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Install scripts are denied unless listed as true here (supply-chain safety).
+# @swc/core: native binary ships in a platform package; its script is only a fallback.
+# protobufjs: script only checks versions.
+allowBuilds:
+  '@swc/core': false
+  protobufjs: false
+
+# Refuse to install with a Node/pnpm version outside "engines".
+engineStrict: true

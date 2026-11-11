@@ -1,0 +1,99 @@
+# Local development infrastructure. Start with `pnpm infra:up` from the repo root.
+# Every port is bound to 127.0.0.1 only. Credentials come from infra/compose/.env
+# (copy .env.example); the defaults below are for local development only.
+name: app-dev
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.24
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres_dev}
+      POSTGRES_DB: postgres
+      APP_DB_NAME: ${APP_DB_NAME:-app}
+      APP_MIGRATOR_PASSWORD: ${APP_MIGRATOR_PASSWORD:-migrator_dev}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:-app_user_dev}
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
+    volumes:
+      # PostgreSQL 18 images store data under /var/lib/postgresql (not .../data).
+      - postgres_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${APP_DB_NAME}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8.1.11-alpine
+    restart: unless-stopped
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-valkey_dev}
+    # noeviction is required by BullMQ: queued jobs must never be evicted.
+    command:
+      - sh
+      - -c
+      - exec valkey-server --requirepass "$${VALKEY_PASSWORD}" --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - 127.0.0.1:${VALKEY_PORT:-6379}:6379
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'valkey-cli -a "$${VALKEY_PASSWORD}" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible storage standing in for Cloudflare R2 (see docs/adr/001).
+  storage:
+    image: rustfs/rustfs:1.0.4
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-app_dev_access}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-app_dev_secret_change_me}
+    ports:
+      - 127.0.0.1:${S3_PORT:-9000}:9000
+      - 127.0.0.1:${S3_CONSOLE_PORT:-9001}:9001
+    volumes:
+      - storage_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/health > /dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # One-shot job: creates the media bucket and its CORS rules (idempotent).
+  storage-init:
+    image: amazon/aws-cli:2.39.6
+    restart: 'no'
+    depends_on:
+      storage:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-app_dev_access}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-app_dev_secret_change_me}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://storage:9000
+      # Only send checksums when the API requires them, like most S3-compatible stores expect.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:-media}
+    volumes:
+      - ./storage/init:/init:ro
+    entrypoint: ['sh', '/init/create-buckets.sh']
+
+volumes:
+  postgres_data:
+  valkey_data:
+  storage_data:

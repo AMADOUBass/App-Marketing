@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+pnpm-lock.yaml
+
+# Hand-edited spec: keep its compact tables as written.
+CLAUDE.md

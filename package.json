@@ -1,0 +1,31 @@
+{
+  "name": "@app/root",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.1",
+  "engines": {
+    "node": ">=26.13.0 <27",
+    "pnpm": ">=11.1.1"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "check": "pnpm format:check && turbo run typecheck lint test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "infra:up": "docker compose -f infra/compose/docker-compose.dev.yml up -d --wait",
+    "infra:down": "docker compose -f infra/compose/docker-compose.dev.yml down",
+    "infra:reset": "docker compose -f infra/compose/docker-compose.dev.yml down --volumes",
+    "infra:logs": "docker compose -f infra/compose/docker-compose.dev.yml logs -f",
+    "infra:ps": "docker compose -f infra/compose/docker-compose.dev.yml ps"
+  },
+  "devDependencies": {
+    "@app/config": "workspace:*",
+    "prettier": "3.9.10",
+    "turbo": "2.11.10",
+    "typescript": "6.0.3"
+  }
+}
