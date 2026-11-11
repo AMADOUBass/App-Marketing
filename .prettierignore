@@ -7,3 +7,4 @@ pnpm-lock.yaml
 
 # Hand-edited spec: keep its compact tables as written.
 CLAUDE.md
+**/src/generated/

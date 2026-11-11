@@ -228,7 +228,9 @@ pnpm infra:up       # postgres, valkey, rustfs (attend qu'ils soient healthy) ; 
 pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
 pnpm dev            # api en watch sur http://127.0.0.1:3000 (copier apps/api/.env.example → .env) ; worker et web à venir
-pnpm db:migrate     # migrations Prisma + SQL
+pnpm db:migrate     # applique les migrations (schéma + RLS) — copier packages/db/.env.example → .env
+pnpm db:migrate:dev # crée une migration depuis schema.prisma (RLS : migration --create-only éditée à la main)
+pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, non versionné)
 pnpm typecheck
 pnpm lint
 pnpm test           # unitaires + intégration (Testcontainers)
@@ -246,8 +248,10 @@ pnpm e2e            # Playwright
   Rôles Postgres : `app_migrator` (propriétaire, migrations) et `app_user` (runtime, sans BYPASSRLS).
   Port Postgres local surchargeable via `infra/compose/.env` (`POSTGRES_PORT`).
 - [x] 0.3 `apps/api` NestJS 12 + Fastify, route `/api/v1/health`, logs pino, OpenTelemetry minimal (ADR 002)
-- [ ] 0.4 `packages/db` : Prisma 7, tables `organizations`, `workspaces`, `memberships`, `posts` ; migration SQL RLS ; helper `withTenant`
+- [x] 0.4 `packages/db` : Prisma 7, tables `organizations`, `workspaces`, `memberships`, `posts` ; migration SQL RLS ; helper `withTenant`
+  (isolation testée au niveau base avec Testcontainers ; `test/rls-coverage.test.ts` fait échouer toute nouvelle table sans RLS)
 - [ ] 0.5 Test d'isolation : l'organisation A ne peut ni lire ni écrire les données de B (doit renvoyer 0 ligne / 404)
+  — reste à faire côté API : route `GET /api/v1/posts/:id` → 404 pour une autre organisation, santé de la base dans `/health`
 - [ ] 0.6 Vérifier si TypeScript 7 fonctionne avec les décorateurs NestJS ; sinon rester sur TS 6 → noter la décision dans un ADR
 - [ ] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
 - [ ] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)

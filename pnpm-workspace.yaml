@@ -5,9 +5,16 @@ packages:
 # Install scripts are denied unless listed as true here (supply-chain safety).
 # @swc/core: native binary ships in a platform package; its script is only a fallback.
 # protobufjs: script only checks versions.
+# prisma: script only checks the Node version.
+# @prisma/engines: downloads the schema engine; the Prisma CLI also fetches it on first use.
+# cpu-features, ssh2: optional native SSH speed-ups pulled in by Testcontainers (unused).
 allowBuilds:
   '@swc/core': false
   protobufjs: false
+  prisma: false
+  '@prisma/engines': false
+  cpu-features: false
+  ssh2: false
 
 # Refuse to install with a Node/pnpm version outside "engines".
 engineStrict: true
