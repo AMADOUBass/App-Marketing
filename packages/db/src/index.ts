@@ -6,6 +6,7 @@ export type {
   OrganizationRole,
   Platform,
   Post,
+  PublishAttempt,
   PublicationState,
   PublicationTarget,
   SocialAccount,

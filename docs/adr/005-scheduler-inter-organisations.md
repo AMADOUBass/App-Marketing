@@ -2,7 +2,7 @@
 
 - Statut : accepté
 - Date : 2026-11-11
-- Tâche : phase 0, 0.7
+- Tâche : phase 0, 0.7 (complété en 0.8 : balayage par bail)
 
 ## Contexte
 
@@ -14,12 +14,15 @@ lisant la table référencée : avec le RLS forcé, la migration échouait pour 
 
 ## Décision
 
-1. **Une seule porte inter-organisations**, en base : deux fonctions `SECURITY DEFINER`,
-   `claim_due_publication_targets()` et `requeue_stale_publication_targets()`.
+1. **Une seule porte inter-organisations**, en base : trois fonctions `SECURITY DEFINER`,
+   `claim_due_publication_targets()`, `requeue_stale_publication_targets()` et (0.8)
+   `expire_stuck_publications()`.
    - Propriétaire : `app_scheduler`, rôle **NOLOGIN** (personne ne peut s'y connecter), sans BYPASSRLS.
-   - Droits de ce rôle : lecture de 6 colonnes de `publication_targets` (identifiants, état, dates,
+   - Droits de ce rôle : lecture de 7 colonnes de `publication_targets` (identifiants, état, dates,
      n° de tentative) et mise à jour de 4 colonnes, sous des politiques RLS qui ne permettent que de
-     passer une cible à `queued`. Aucun accès aux posts, comptes ou autres tables.
+     passer une cible à `queued` (réclamation) ou de `publishing` à `unknown_outcome` (bail expiré).
+     Aucun accès aux posts, comptes ou autres tables. Les politiques UPDATE étant permissives, elles se
+     cumulent : la vraie limite est le SQL figé des fonctions, les politiques sont une seconde barrière.
    - Les fonctions ne renvoient que `(organization_id, target_id, scheduled_at, attempt_no)`, jamais de
      contenu. `app_user` peut les exécuter, mais ne peut pas devenir `app_scheduler`.
    - Le traitement du job repasse par `withTenant(organization_id)`.
@@ -37,6 +40,16 @@ lisant la table référencée : avec le RLS forcé, la migration échouait pour 
    (`queued`) et l'ajout du job, `requeue_stale_publication_targets()` rend la cible au scheduler après un
    délai de grâce, avec le même n° de tentative : le `jobId` déterministe rend la remise en file idempotente.
    Le worker ne traite une cible que si elle est encore `queued` pour cette tentative exacte.
+6. **Une exécution au plus par tentative, aucune disparition (0.8)** :
+   - dans la même transaction que `queued → publishing`, le worker insère `publish_attempts` avec une
+     contrainte unique `(target_id, attempt_no)` : deuxième barrière, indépendante de la première ;
+   - un job qui trouve la cible dans un autre état ne fait rien. Le worker ne tente **pas** de deviner qu'un
+     job relivré vient d'un crash (impossible à distinguer d'un doublon pendant une publication saine) ;
+   - à la place, `expire_stuck_publications()` passe en `unknown_outcome` toute cible restée en cours de
+     publication au-delà du bail (`PUBLISH_LEASE_SECONDS`, 30 min par défaut) : crash avec job relivré ou
+     job perdu, même traitement. `unknown_outcome` impose une réconciliation avant toute nouvelle tentative ;
+   - si l'adaptateur répond après l'expiration du bail, sa réponse est gardée dans `publish_attempts`
+     (preuve pour la réconciliation) et la cible reste en `unknown_outcome`.
 
 ## Conséquences
 

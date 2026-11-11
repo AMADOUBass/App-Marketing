@@ -29,6 +29,11 @@ export const envSchema = z
     /** A target still queued this long after its time is considered lost and queued again. */
     SCHEDULER_RECOVERY_GRACE_SECONDS: int(1, 86_400).default(120),
     LEADER_LOCK_TTL_MS: int(100, 300_000).default(30_000),
+    /**
+     * A target still publishing this long after a worker started it is moved to unknown_outcome
+     * (the worker died). Must exceed the slowest legitimate publish (large video uploads).
+     */
+    PUBLISH_LEASE_SECONDS: int(1, 86_400).default(1800),
     PUBLISH_CONCURRENCY: int(1, 100).default(5),
   })
   .superRefine((env, ctx) => {

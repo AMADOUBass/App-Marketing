@@ -34,6 +34,7 @@ model Organization {
   posts              Post[]
   socialAccounts     SocialAccount[]
   publicationTargets PublicationTarget[]
+  publishAttempts    PublishAttempt[]
 
   @@map("organizations")
 }
@@ -142,25 +143,63 @@ enum PublicationState {
 
 /// Unit of execution: one post x one social account.
 model PublicationTarget {
-  id              String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  organizationId  String           @map("organization_id") @db.Uuid
-  postId          String           @map("post_id") @db.Uuid
-  socialAccountId String           @map("social_account_id") @db.Uuid
-  state           PublicationState @default(draft)
-  scheduledAt     DateTime?        @map("scheduled_at") @db.Timestamptz(6)
+  id                  String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId      String           @map("organization_id") @db.Uuid
+  postId              String           @map("post_id") @db.Uuid
+  socialAccountId     String           @map("social_account_id") @db.Uuid
+  state               PublicationState @default(draft)
+  scheduledAt         DateTime?        @map("scheduled_at") @db.Timestamptz(6)
   /// Set when the scheduler hands the target to the queue.
-  queuedAt        DateTime?        @map("queued_at") @db.Timestamptz(6)
+  queuedAt            DateTime?        @map("queued_at") @db.Timestamptz(6)
   /// Incremented on each hand-off to the queue; part of the job id.
-  attemptCount    Int              @default(0) @map("attempt_count")
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  attemptCount        Int              @default(0) @map("attempt_count")
+  /// Set when a worker starts publishing. A target stuck past the lease is moved to unknown_outcome.
+  publishingStartedAt DateTime?        @map("publishing_started_at") @db.Timestamptz(6)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  post          Post          @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Cascade)
-  socialAccount SocialAccount @relation(fields: [organizationId, socialAccountId], references: [organizationId, id], onDelete: Cascade)
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  post          Post             @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Cascade)
+  socialAccount SocialAccount    @relation(fields: [organizationId, socialAccountId], references: [organizationId, id], onDelete: Cascade)
+  attempts      PublishAttempt[]
 
   @@unique([organizationId, id])
   /// A post can target a social account only once (no double publication).
   @@unique([postId, socialAccountId])
   @@map("publication_targets")
+}
+
+/// Error classes (CLAUDE.md section 5). Only transient and quota are retried.
+enum ErrorClass {
+  transient
+  quota
+  auth
+  content
+  unknown
+
+  @@map("error_class")
+}
+
+/// One row per execution attempt of a target. Written in the same transaction as queued -> publishing:
+/// the unique (target_id, attempt_no) makes a second execution of the same attempt impossible.
+/// finished_at NULL after the lease means the worker died mid-publish.
+model PublishAttempt {
+  id             String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  targetId       String            @map("target_id") @db.Uuid
+  attemptNo      Int               @map("attempt_no")
+  startedAt      DateTime          @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt     DateTime?         @map("finished_at") @db.Timestamptz(6)
+  outcome        PublicationState?
+  errorClass     ErrorClass?       @map("error_class")
+  /// Sanitized platform request/response (filled by adapters; never tokens).
+  request        Json?
+  response       Json?
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  target       PublicationTarget @relation(fields: [organizationId, targetId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([organizationId, id])
+  @@unique([targetId, attemptNo])
+  @@map("publish_attempts")
 }

@@ -47,8 +47,13 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
   }
 
   /**
-   * Runs one publish job. The target must still be 'queued' for this exact attempt: duplicates, stale
-   * attempts and jobs pointing at another organization's target (hidden by RLS) do nothing.
+   * Runs one publish job, at most once per attempt (rule 6). Two independent guards, in one transaction:
+   * 1. conditional transition queued -> publishing for this exact attempt (concurrent duplicates wait for
+   *    the row lock, then match nothing);
+   * 2. insert into publish_attempts, unique (target_id, attempt_no).
+   * Anything else (duplicate or redelivered job, stale attempt, target of another organization hidden by
+   * RLS) does nothing. A worker that dies mid-publish leaves the target 'publishing': the scheduler moves
+   * it to unknown_outcome after the lease (never re-published blindly).
    */
   async process(job: PublishJobData): Promise<ProcessResult> {
     const log = this.logger.child({ targetId: job.targetId, attemptNo: job.attemptNo });
@@ -56,9 +61,16 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
     const target = await this.db.withTenant(job.organizationId, async (tx) => {
       const { count } = await tx.publicationTarget.updateMany({
         where: { id: job.targetId, state: 'queued', attemptCount: job.attemptNo },
-        data: { state: 'publishing' },
+        data: { state: 'publishing', publishingStartedAt: new Date() },
       });
       if (count === 0) return null;
+      await tx.publishAttempt.create({
+        data: {
+          organizationId: job.organizationId,
+          targetId: job.targetId,
+          attemptNo: job.attemptNo,
+        },
+      });
       return tx.publicationTarget.findUniqueOrThrow({
         where: { id: job.targetId },
         select: {
@@ -74,6 +86,7 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
     }
 
     let outcome: PublicationState;
+    let errorClass: 'unknown' | null = null;
     try {
       outcome = await this.handler.publish({
         organizationId: job.organizationId,
@@ -87,14 +100,29 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
       // We cannot know whether the platform received it: reconcile before any new attempt (CLAUDE.md).
       log.error({ err: error }, 'publish handler threw; outcome unknown');
       outcome = 'unknown_outcome';
+      errorClass = 'unknown';
     }
 
-    await this.db.withTenant(job.organizationId, (tx) =>
-      tx.publicationTarget.updateMany({
-        where: { id: job.targetId, state: 'publishing' },
+    const stored = await this.db.withTenant(job.organizationId, async (tx) => {
+      // The attempt keeps what the adapter reported, even if the lease expired meanwhile.
+      await tx.publishAttempt.updateMany({
+        where: { targetId: job.targetId, attemptNo: job.attemptNo },
+        data: { finishedAt: new Date(), outcome, errorClass },
+      });
+      const { count } = await tx.publicationTarget.updateMany({
+        where: { id: job.targetId, state: 'publishing', attemptCount: job.attemptNo },
         data: { state: outcome },
-      }),
-    );
+      });
+      return count === 1;
+    });
+    if (!stored) {
+      // The scheduler already moved it to unknown_outcome: reconciliation will use the attempt row.
+      log.warn(
+        { outcome },
+        'lease expired before the adapter answered; target left in unknown_outcome',
+      );
+      return 'unknown_outcome';
+    }
     log.info({ outcome }, 'publish job finished');
     return outcome;
   }

@@ -118,7 +118,7 @@ erreurs : retrying | failed | needs_action | unknown_outcome → reconciled | ca
   `SELECT … WHERE state='scheduled' AND scheduled_at < now() + interval '60 seconds' FOR UPDATE SKIP LOCKED`,
   passe la cible en `queued`, met le job en file avec le délai exact.
 - Cette requête inter-organisations passe **uniquement** par les fonctions `SECURITY DEFINER`
-  `claim_due_publication_targets()` / `requeue_stale_publication_targets()` (rôle NOLOGIN `app_scheduler`,
+  `claim_due_publication_targets()` / `requeue_stale_publication_targets()` / `expire_stuck_publications()` (rôle NOLOGIN `app_scheduler`,
   identifiants seulement) ; le job repasse par `withTenant`. Toute autre exception au RLS fait échouer la CI (ADR 005).
 - Contrôle 15 min avant l'heure : jeton, permissions, quota restant, conformité du média.
 
@@ -261,7 +261,9 @@ pnpm e2e            # Playwright
 - [x] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
   (tables `social_accounts`, `publication_targets` ; verrou de leader Valkey ; récupération des jobs perdus ;
   sans adaptateur → `needs_action` ; `app_migrator` a BYPASSRLS pour les migrations — ADR 005)
-- [ ] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
+- [x] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
+  (transition conditionnelle + `publish_attempts` unique `(target_id, attempt_no)` dans la même transaction ;
+  bail `PUBLISH_LEASE_SECONDS` : cible bloquée en publication → `unknown_outcome`, jamais republiée à l'aveugle — ADR 005)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
 - [ ] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
 

@@ -41,6 +41,8 @@ export interface Db {
     claimDue(options: { horizonSeconds: number; limit: number }): Promise<DispatchItem[]>;
     /** Targets still queued `graceSeconds` after their time (job probably lost), same attempt number. */
     requeueStale(options: { graceSeconds: number; limit: number }): Promise<DispatchItem[]>;
+    /** Publishing for longer than `leaseSeconds` (worker died): -> unknown_outcome, reconcile first. */
+    expireStuck(options: { leaseSeconds: number; limit: number }): Promise<DispatchItem[]>;
   };
   disconnect(): Promise<void>;
 }
@@ -121,6 +123,12 @@ export function createDb(options: DbOptions): Db {
         const rows = await prisma.$queryRaw<DispatchRow[]>`
           SELECT organization_id, target_id, scheduled_at, attempt_no
           FROM requeue_stale_publication_targets(${graceSeconds}::integer, ${limit}::integer)`;
+        return rows.map(toDispatchItem);
+      },
+      expireStuck: async ({ leaseSeconds, limit }) => {
+        const rows = await prisma.$queryRaw<DispatchRow[]>`
+          SELECT organization_id, target_id, scheduled_at, attempt_no
+          FROM expire_stuck_publications(${leaseSeconds}::integer, ${limit}::integer)`;
         return rows.map(toDispatchItem);
       },
     },

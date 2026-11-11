@@ -68,6 +68,17 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
       if (stale.length > 0) {
         this.logger.warn({ count: stale.length }, 'requeueing targets whose job was probably lost');
       }
+      // Rule 6: nothing stays in flight forever. Never re-queued: reconciliation decides.
+      const expired = await this.db.scheduler.expireStuck({
+        leaseSeconds: this.env.PUBLISH_LEASE_SECONDS,
+        limit: this.env.SCHEDULER_BATCH_SIZE,
+      });
+      for (const item of expired) {
+        this.logger.warn(
+          { targetId: item.targetId, attemptNo: item.attemptNo },
+          'publish lease expired (worker died?); target moved to unknown_outcome',
+        );
+      }
 
       await this.enqueue([...due, ...stale]);
       return { leader: true, enqueued: due.length + stale.length };

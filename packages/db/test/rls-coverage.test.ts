@@ -72,7 +72,12 @@ describe('row-level security coverage', () => {
 
   it('cross-organization policies are limited to the reviewed scheduler exceptions (ADR 005)', async () => {
     const allowed: Record<string, string[]> = {
-      publication_targets: ['scheduler_queue', 'scheduler_read', 'tenant_isolation'],
+      publication_targets: [
+        'scheduler_expire',
+        'scheduler_queue',
+        'scheduler_read',
+        'tenant_isolation',
+      ],
     };
     for (const info of await publicTables()) {
       expect([...info.policies].sort(), info.table).toEqual(
@@ -90,6 +95,7 @@ describe('row-level security coverage', () => {
 
     expect(rows).toEqual([
       { name: 'claim_due_publication_targets', owner: 'app_scheduler' },
+      { name: 'expire_stuck_publications', owner: 'app_scheduler' },
       { name: 'requeue_stale_publication_targets', owner: 'app_scheduler' },
     ]);
   });

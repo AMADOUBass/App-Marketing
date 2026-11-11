@@ -90,7 +90,7 @@ export function createSeeder() {
       fixture: Fixture,
       state: PublicationState,
       scheduledAt: Date | null,
-      extra: { queuedAt?: Date; attemptCount?: number } = {},
+      extra: { queuedAt?: Date; attemptCount?: number; publishingStartedAt?: Date } = {},
     ): Promise<string> {
       return db.withTenant(fixture.orgId, async (tx) => {
         const post = await tx.post.create({
