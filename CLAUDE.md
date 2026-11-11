@@ -42,7 +42,7 @@ Hors périmètre (ne pas coder) : gestion publicitaire, écoute sociale, CRM, é
 | Couche | Choix |
 | --- | --- |
 | Runtime | Node.js 26 LTS (26.13.0, voir ADR 001) |
-| Langage | TypeScript strict. Le compilateur natif TS 7 n'a pas d'API programmatique avant 7.1 : utiliser TS 6.x pour l'outillage (lint, NestJS) tant que la compatibilité TS 7 n'est pas validée |
+| Langage | TypeScript 6.0 strict. TS 7 testé (0.6, ADR 004) : compatible avec notre code et les décorateurs, mais typescript-eslint et le CLI Nest exigent TS 6 — migrer quand ils le supporteront |
 | Monorepo | pnpm workspaces + Turborepo |
 | Backend | NestJS 12 en ESM (adaptateur Fastify), émission SWC — voir ADR 002 |
 | Validation | Zod 4 (schémas partagés front/back) → OpenAPI 3.1 généré |
@@ -253,7 +253,8 @@ pnpm e2e            # Playwright
 - [x] 0.5 Test d'isolation : l'organisation A ne peut ni lire ni écrire les données de B (doit renvoyer 0 ligne / 404)
   — base (Testcontainers) et API (`GET/PATCH /api/v1/posts/:id` → 404 identique à « inexistant ») ; `/api/v1/health/ready` ;
   organisation provisoire par en-tête `x-dev-organization-id` derrière `DEV_TENANT_HEADER`, interdit en production (ADR 003)
-- [ ] 0.6 Vérifier si TypeScript 7 fonctionne avec les décorateurs NestJS ; sinon rester sur TS 6 → noter la décision dans un ADR
+- [x] 0.6 Vérifier si TypeScript 7 fonctionne avec les décorateurs NestJS ; sinon rester sur TS 6 → noter la décision dans un ADR
+  (TS 7 OK pour le code et les décorateurs, mais on reste sur TS 6 à cause de typescript-eslint et du CLI Nest — ADR 004)
 - [ ] 0.7 `apps/worker` : BullMQ + Valkey ; scheduler toutes les 10 s avec `FOR UPDATE SKIP LOCKED` ; un job programmé part à l'heure (test)
 - [ ] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
