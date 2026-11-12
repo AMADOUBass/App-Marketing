@@ -153,6 +153,7 @@ CREATE POLICY tenant_isolation ON posts
   `SELECT set_config('app.org_id', $1, true)`. Les jobs reçoivent `organizationId` dans leur payload et appellent `withTenant`.
 - Jetons OAuth : table `oauth_credentials`, chiffrement AES-256-GCM par enveloppe (clé de données par organisation, clé maître hors base),
   identifiant du compte en données associées. Déchiffrement autorisé seulement dans le worker.
+  Enveloppe à clé publique (X25519) : l'api n'a que des clés publiques et ne peut pas relire un jeton (ADR 006).
 - `metric_snapshots` et `audit_events` partitionnées par mois ; colonne `expires_at` pour la rétention par plateforme
   (YouTube : rafraîchir ou supprimer après 30 jours pour la plupart des données).
 - Migrations : Prisma Migrate pour le schéma ; fichiers SQL manuels pour RLS, partitions, index partiels. Stratégie expand puis contract.
@@ -232,6 +233,7 @@ pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
 pnpm dev            # web (http://localhost:5173) + api (:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env
 pnpm db:seed        # organisations de démonstration (ids fixes, affichés) pour se connecter sur le web
+pnpm vault:keygen   # nouvelle paire de clés maître du coffre à jetons : publique → api, privée → worker SEULEMENT (ADR 006)
 pnpm db:migrate     # applique les migrations (schéma + RLS) — copier packages/db/.env.example → .env
 pnpm db:migrate:dev # crée une migration depuis schema.prisma (RLS : migration --create-only éditée à la main)
 pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, non versionné)
@@ -266,6 +268,10 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
   (transition conditionnelle + `publish_attempts` unique `(target_id, attempt_no)` dans la même transaction ;
   bail `PUBLISH_LEASE_SECONDS` : cible bloquée en publication → `unknown_outcome`, jamais republiée à l'aveugle — ADR 005)
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
+  - [x] 9a coffre à jetons `packages/vault` : tables `organization_keys` / `oauth_credentials` ; X25519 + AES-256-GCM ;
+    l'API scelle (`@app/vault/seal`), seul le worker ouvre (`@app/vault/open`, interdit dans l'api par ESLint) ; type `Secret` (ADR 006)
+  - [ ] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités, adaptateur Instagram d'après la doc officielle (fixtures)
+  - [ ] 9c essai réel sur le compte Instagram de test (compte développeur Meta requis)
 - [x] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
   (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
   routes déclarées en code (pas de fichier généré) ; E2E Playwright + axe WCAG 2.2 AA en CI)

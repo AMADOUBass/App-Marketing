@@ -32,7 +32,8 @@ jobs:
 
       - run: pnpm format:check
 
-      - run: pnpm turbo run typecheck lint test
+      # Several test suites start Docker containers: cap parallel tasks so test workers start in time.
+      - run: pnpm turbo run typecheck lint test --concurrency=4
 
   e2e:
     name: E2E (Playwright + axe)

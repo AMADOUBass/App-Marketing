@@ -35,6 +35,8 @@ model Organization {
   socialAccounts     SocialAccount[]
   publicationTargets PublicationTarget[]
   publishAttempts    PublishAttempt[]
+  key                OrganizationKey?
+  oauthCredentials   OauthCredential[]
 
   @@map("organizations")
 }
@@ -115,10 +117,54 @@ model SocialAccount {
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workspace    Workspace           @relation(fields: [organizationId, workspaceId], references: [organizationId, id], onDelete: Cascade)
   targets      PublicationTarget[]
+  credential   OauthCredential?
 
   @@unique([organizationId, id])
   @@unique([organizationId, platform, externalAccountId])
   @@map("social_accounts")
+}
+
+/// Per-organization X25519 key pair (ADR 006). The public key seals OAuth tokens (API side); the
+/// private key is stored sealed with the master public key and can only be unsealed where the master
+/// private key lives (worker). Deleting this row makes every token of the organization unrecoverable.
+model OrganizationKey {
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId   String   @unique @map("organization_id") @db.Uuid
+  /// Raw 32-byte X25519 public key.
+  publicKey        Bytes    @map("public_key")
+  /// Org private key sealed with the master public key identified by master_key_id.
+  sealedPrivateKey Bytes    @map("sealed_private_key")
+  masterKeyId      String   @map("master_key_id")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credentials  OauthCredential[]
+
+  @@unique([organizationId, id])
+  @@map("organization_keys")
+}
+
+/// OAuth tokens of a social account, sealed with the organization public key (never stored in clear).
+model OauthCredential {
+  id                String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  socialAccountId   String    @unique @map("social_account_id") @db.Uuid
+  organizationKeyId String    @map("organization_key_id") @db.Uuid
+  /// Sealed box (format v1, see @app/vault) of the token JSON.
+  sealedTokens      Bytes     @map("sealed_tokens")
+  scopes            String[]
+  /// Access token expiry reported by the platform (never a hardcoded duration).
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount   @relation(fields: [organizationId, socialAccountId], references: [organizationId, id], onDelete: Cascade)
+  organizationKey OrganizationKey @relation(fields: [organizationId, organizationKeyId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, socialAccountId])
+  @@map("oauth_credentials")
 }
 
 /// Lifecycle of one post on one social account (CLAUDE.md section 5).
