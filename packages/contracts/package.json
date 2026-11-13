@@ -1,5 +1,5 @@
 {
-  "name": "@app/contracts",
+  "name": "@ponctua/contracts",
   "version": "0.0.0",
   "private": true,
   "description": "Zod schemas and types shared by the API and the web app.",
@@ -20,7 +20,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "@types/node": "26.6.6",
     "eslint": "10.14.0",
     "typescript": "6.0.3",

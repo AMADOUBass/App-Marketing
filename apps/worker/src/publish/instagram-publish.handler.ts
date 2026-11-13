@@ -1,6 +1,6 @@
-import type { Db } from '@app/db';
-import type { PlatformAdapter, PublishOutcome } from '@app/integrations';
-import type { VaultOpener } from '@app/vault/open';
+import type { Db } from '@ponctua/db';
+import type { PlatformAdapter, PublishOutcome } from '@ponctua/integrations';
+import type { VaultOpener } from '@ponctua/vault/open';
 import type {
   PublishHandler,
   PublishHooks,

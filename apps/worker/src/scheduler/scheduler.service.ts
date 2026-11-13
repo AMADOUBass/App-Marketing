@@ -4,7 +4,7 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import type { Db, DispatchItem } from '@app/db';
+import type { Db, DispatchItem } from '@ponctua/db';
 import type { Queue } from 'bullmq';
 import type { Logger } from 'pino';
 import { PUBLISH_QUEUE, type PublishJobData, publishJobId } from '../common/queues.js';

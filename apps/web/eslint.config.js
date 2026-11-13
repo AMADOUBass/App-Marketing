@@ -1,4 +1,4 @@
-import { createConfig } from '@app/config/eslint';
+import { createConfig } from '@ponctua/config/eslint';
 
 export default [
   ...createConfig({ tsconfigRootDir: import.meta.dirname, env: 'browser', react: true }),
@@ -10,7 +10,7 @@ export default [
         {
           patterns: [
             {
-              group: ['@app/vault', '@app/vault/*', '@app/db', '@app/db/*'],
+              group: ['@ponctua/vault', '@ponctua/vault/*', '@ponctua/db', '@ponctua/db/*'],
               message:
                 'Server-only package: the web app talks to the API, never to the vault or the database.',
             },

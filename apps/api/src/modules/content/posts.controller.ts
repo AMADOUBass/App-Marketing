@@ -7,7 +7,7 @@ import {
   type PostPage,
   type UpdatePostInput,
   updatePostSchema,
-} from '@app/contracts';
+} from '@ponctua/contracts';
 import { OrganizationId } from '../../common/tenant.js';
 import { PostsService } from './posts.service.js';
 

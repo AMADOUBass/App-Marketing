@@ -1,5 +1,5 @@
 import { randomUUIDv7 } from 'node:crypto';
-import { createDb, type Db, type PublicationState } from '@app/db';
+import { createDb, type Db, type PublicationState } from '@ponctua/db';
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { inject } from 'vitest';

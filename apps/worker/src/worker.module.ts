@@ -6,9 +6,9 @@ import {
   type OnApplicationShutdown,
   type Provider,
 } from '@nestjs/common';
-import { createDb, type Db } from '@app/db';
-import { createInstagramAdapter, type FetchLike } from '@app/integrations';
-import { createVaultOpener, parseMasterPrivateKeys } from '@app/vault/open';
+import { createDb, type Db } from '@ponctua/db';
+import { createInstagramAdapter, type FetchLike } from '@ponctua/integrations';
+import { createVaultOpener, parseMasterPrivateKeys } from '@ponctua/vault/open';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { type DestinationStream, type Logger, pino } from 'pino';

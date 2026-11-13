@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { ListPostsQuery, PostDto, PostPage, UpdatePostInput } from '@app/contracts';
-import type { Db, Post } from '@app/db';
+import type { ListPostsQuery, PostDto, PostPage, UpdatePostInput } from '@ponctua/contracts';
+import type { Db, Post } from '@ponctua/db';
 import { DB } from '../../common/db.module.js';
 
 // Same message whether the post does not exist or belongs to another organization:

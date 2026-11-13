@@ -1,8 +1,8 @@
 import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
-import { createDb, type Db } from '@app/db';
+import { createDb, type Db } from '@ponctua/db';
 import { ENV, type Env } from '../config/env.js';
 
-/** Injection token for the tenant-scoped database (see @app/db withTenant). */
+/** Injection token for the tenant-scoped database (see @ponctua/db withTenant). */
 export const DB = Symbol('DB');
 
 @Injectable()

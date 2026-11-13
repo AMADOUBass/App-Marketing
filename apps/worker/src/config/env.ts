@@ -1,4 +1,4 @@
-import { Secret } from '@app/vault';
+import { Secret } from '@ponctua/vault';
 import { z } from 'zod';
 
 export const PROCESS_ROLES = ['scheduler', 'publish', 'all'] as const;

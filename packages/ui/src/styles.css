@@ -1,5 +1,5 @@
 /*
- * Design tokens for @app/ui (shadcn/ui, neutral palette). Import once from the app stylesheet, after
+ * Design tokens for @ponctua/ui (shadcn/ui, neutral palette). Import once from the app stylesheet, after
  * `@import "tailwindcss";`. Text tokens keep at least 4.5:1 contrast on their background (WCAG 2.2 AA).
  * Dark mode follows the operating system setting.
  */

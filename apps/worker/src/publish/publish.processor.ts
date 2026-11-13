@@ -4,7 +4,7 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import type { Db, PublicationState } from '@app/db';
+import type { Db, PublicationState } from '@ponctua/db';
 import { Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';

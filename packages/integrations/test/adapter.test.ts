@@ -1,4 +1,4 @@
-import { Secret } from '@app/vault';
+import { Secret } from '@ponctua/vault';
 import { describe, expect, it, vi } from 'vitest';
 import { createInstagramAdapter, instagramCapabilities, type PublishJob } from '../src/index.js';
 import { createFakeGraph } from './fake-graph.js';

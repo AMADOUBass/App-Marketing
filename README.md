@@ -1,4 +1,4 @@
-# App-Marketing
+# Ponctua
 
 Plateforme SaaS de gestion des réseaux sociaux pour agences et équipes marketing (phase 0 : socle technique).
 Les règles du projet, la stack et la feuille de route sont dans [CLAUDE.md](CLAUDE.md) ; les décisions

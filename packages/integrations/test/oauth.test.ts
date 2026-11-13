@@ -1,4 +1,4 @@
-import { Secret } from '@app/vault';
+import { Secret } from '@ponctua/vault';
 import { describe, expect, it } from 'vitest';
 import {
   buildLoginUrl,

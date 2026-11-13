@@ -1,5 +1,5 @@
 {
-  "extends": "@app/config/tsconfig/node.json",
+  "extends": "@ponctua/config/tsconfig/node.json",
   "compilerOptions": {
     "noEmit": true
   },

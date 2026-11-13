@@ -1,5 +1,5 @@
 {
-  "name": "@app/vault",
+  "name": "@ponctua/vault",
   "version": "0.0.0",
   "private": true,
   "description": "OAuth token vault (ADR 006): seal anywhere with public keys, open only where the master private key lives (worker).",
@@ -26,10 +26,10 @@
     "keygen": "node dist/keygen.js"
   },
   "dependencies": {
-    "@app/db": "workspace:*"
+    "@ponctua/db": "workspace:*"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "@types/node": "26.6.6",
     "@types/pg": "8.23.1",
     "eslint": "10.14.0",

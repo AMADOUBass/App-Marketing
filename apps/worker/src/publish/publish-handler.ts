@@ -1,4 +1,4 @@
-import type { Platform } from '@app/db';
+import type { Platform } from '@ponctua/db';
 
 export interface PublishTarget {
   organizationId: string;

@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
-import type { Db } from '@app/db';
+import type { Db } from '@ponctua/db';
 import { DB } from '../../common/db.module.js';
 import { Public } from '../../common/tenant.js';
 

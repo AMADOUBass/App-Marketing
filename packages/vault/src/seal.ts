@@ -1,6 +1,6 @@
 // API side (ADR 006): stores OAuth tokens sealed with the organization PUBLIC key. Holds no private key,
 // so nothing imported from here can ever read a stored token back.
-import type { TenantTx } from '@app/db';
+import type { TenantTx } from '@ponctua/db';
 import {
   encodeTokens,
   type OauthTokens,

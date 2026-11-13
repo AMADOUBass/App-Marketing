@@ -1,5 +1,5 @@
 {
-  "name": "@app/web",
+  "name": "@ponctua/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@app/contracts": "workspace:*",
-    "@app/ui": "workspace:*",
+    "@ponctua/contracts": "workspace:*",
+    "@ponctua/ui": "workspace:*",
     "@tanstack/react-query": "5.107.1",
     "@tanstack/react-router": "1.170.46",
     "i18next": "27.1.1",
@@ -25,7 +25,7 @@
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.65.0",
     "@tailwindcss/vite": "4.3.5",

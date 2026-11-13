@@ -1,1 +1,1 @@
-export { default } from '@app/config/prettier';
+export { default } from '@ponctua/config/prettier';

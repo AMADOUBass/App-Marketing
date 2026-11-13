@@ -1,4 +1,4 @@
-import { startTestDatabase, type TestDatabase } from '@app/db/testing';
+import { startTestDatabase, type TestDatabase } from '@ponctua/db/testing';
 import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 import type { TestProject } from 'vitest/node';
 

@@ -1,5 +1,5 @@
 {
-  "extends": "@app/config/tsconfig/nest.json",
+  "extends": "@ponctua/config/tsconfig/nest.json",
   "compilerOptions": {
     "outDir": "dist"
   },

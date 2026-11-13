@@ -1,4 +1,4 @@
-/** Tenant-scoped database (@app/db). */
+/** Tenant-scoped database (@ponctua/db). */
 export const DB = Symbol('DB');
 /** pino logger. */
 export const LOGGER = Symbol('LOGGER');

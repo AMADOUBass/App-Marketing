@@ -1,5 +1,5 @@
 import { randomUUIDv7 } from 'node:crypto';
-import { createDb, type Db } from '@app/db';
+import { createDb, type Db } from '@ponctua/db';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { DEV_TENANT_HEADER } from '../src/common/tenant.js';

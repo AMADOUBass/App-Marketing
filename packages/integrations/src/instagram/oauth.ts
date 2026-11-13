@@ -1,7 +1,7 @@
 // Connecting a client's Instagram professional account (Instagram API with Unified Login, ADR 007).
 // Server side only: the app secret and the tokens never reach the browser (rule 3).
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { Secret } from '@app/vault';
+import { Secret } from '@ponctua/vault';
 import { z } from 'zod';
 import { instagramCapabilities } from '../capabilities/instagram.js';
 import type { GraphRequestFn } from './graph-client.js';

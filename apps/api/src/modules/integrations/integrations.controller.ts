@@ -6,7 +6,7 @@ import {
   type OauthCallbackQuery,
   oauthCallbackQuerySchema,
   type SocialAccountList,
-} from '@app/contracts';
+} from '@ponctua/contracts';
 import { OrganizationId, Public } from '../../common/tenant.js';
 import { InstagramConnectionService } from './instagram-connection.service.js';
 

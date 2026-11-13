@@ -10,7 +10,7 @@ const { values } = parseArgs({
   options: {
     org: { type: 'string' },
     image: { type: 'string' },
-    caption: { type: 'string', default: 'Test de publication depuis App Marketing 🚀' },
+    caption: { type: 'string', default: 'Test de publication depuis Ponctua 🚀' },
     in: { type: 'string', default: '60' },
   },
 });

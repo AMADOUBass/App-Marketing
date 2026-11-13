@@ -1,4 +1,4 @@
-import { createConfig } from '@app/config/eslint';
+import { createConfig } from '@ponctua/config/eslint';
 
 export default [
   ...createConfig({ tsconfigRootDir: import.meta.dirname }),
@@ -11,8 +11,8 @@ export default [
         {
           paths: [
             {
-              name: '@app/vault/open',
-              message: 'Only the worker may open sealed tokens (ADR 006). Use @app/vault/seal.',
+              name: '@ponctua/vault/open',
+              message: 'Only the worker may open sealed tokens (ADR 006). Use @ponctua/vault/seal.',
             },
           ],
         },

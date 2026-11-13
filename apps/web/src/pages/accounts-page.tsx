@@ -1,5 +1,5 @@
-import { instagramConnectResponseSchema, socialAccountListSchema } from '@app/contracts';
-import { Button, Card, CardContent } from '@app/ui';
+import { instagramConnectResponseSchema, socialAccountListSchema } from '@ponctua/contracts';
+import { Button, Card, CardContent } from '@ponctua/ui';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { MainNav } from '../components/main-nav';

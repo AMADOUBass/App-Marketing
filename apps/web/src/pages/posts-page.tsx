@@ -1,5 +1,5 @@
-import { postPageSchema } from '@app/contracts';
-import { Button, Card, CardContent } from '@app/ui';
+import { postPageSchema } from '@ponctua/contracts';
+import { Button, Card, CardContent } from '@ponctua/ui';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';

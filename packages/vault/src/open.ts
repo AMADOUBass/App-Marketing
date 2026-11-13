@@ -1,6 +1,6 @@
 // Worker side only (ADR 006): needs the master PRIVATE keys. The API must never import this module
 // (enforced by an ESLint rule in apps/api).
-import type { TenantTx } from '@app/db';
+import type { TenantTx } from '@ponctua/db';
 import {
   decodeTokens,
   type OauthTokens,

@@ -8,7 +8,7 @@ importers:
 
   .:
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:packages/config
       prettier:
@@ -23,18 +23,6 @@ importers:
 
   apps/api:
     dependencies:
-      '@app/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@app/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@app/integrations':
-        specifier: workspace:*
-        version: link:../../packages/integrations
-      '@app/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
       '@nestjs/common':
         specifier: 12.4.0
         version: 12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -56,6 +44,18 @@ importers:
       '@opentelemetry/sdk-node':
         specifier: 0.301.0
         version: 0.301.0(@opentelemetry/api@1.10.0)
+      '@ponctua/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@ponctua/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@ponctua/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
+      '@ponctua/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
       fastify:
         specifier: 5.12.8
         version: 5.12.8
@@ -78,15 +78,15 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@app/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@nestjs/cli':
         specifier: 12.0.12
         version: 12.0.12(@swc/cli@0.8.2(@swc/core@1.16.22)(chokidar@5.0.0))(@swc/core@1.16.22)(@types/node@26.6.6)(prettier@3.9.10)
       '@nestjs/testing':
         specifier: 12.4.0
         version: 12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))
+      '@ponctua/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@swc/cli':
         specifier: 0.8.2
         version: 0.8.2(@swc/core@1.16.22)(chokidar@5.0.0)
@@ -114,10 +114,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@app/contracts':
+      '@ponctua/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@app/ui':
+      '@ponctua/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-query':
@@ -145,15 +145,15 @@ importers:
         specifier: 5.1.0
         version: 5.1.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
     devDependencies:
-      '@app/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@axe-core/playwright':
         specifier: 4.14.0
         version: 4.14.0(playwright-core@1.65.0)
       '@playwright/test':
         specifier: 1.65.0
         version: 1.65.0
+      '@ponctua/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@tailwindcss/vite':
         specifier: 4.3.5
         version: 4.3.5(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
@@ -199,21 +199,21 @@ importers:
 
   apps/worker:
     dependencies:
-      '@app/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@app/integrations':
-        specifier: workspace:*
-        version: link:../../packages/integrations
-      '@app/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
       '@nestjs/common':
         specifier: 12.4.0
         version: 12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core':
         specifier: 12.4.0
         version: 12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@ponctua/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@ponctua/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
+      '@ponctua/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
       bullmq:
         specifier: 6.7.4
         version: 6.7.4(ioredis@6.0.0)(pg@8.23.1)
@@ -233,12 +233,12 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@app/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@nestjs/cli':
         specifier: 12.0.12
         version: 12.0.12(@swc/cli@0.8.2(@swc/core@1.16.22)(chokidar@5.0.0))(@swc/core@1.16.22)(@types/node@26.6.6)(prettier@3.9.10)
+      '@ponctua/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@swc/cli':
         specifier: 0.8.2
         version: 0.8.2(@swc/core@1.16.22)(chokidar@5.0.0)
@@ -304,7 +304,7 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -332,7 +332,7 @@ importers:
         specifier: 8.23.1
         version: 8.23.1
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:../config
       '@testcontainers/postgresql':
@@ -359,14 +359,14 @@ importers:
 
   packages/integrations:
     dependencies:
-      '@app/vault':
+      '@ponctua/vault':
         specifier: workspace:*
         version: link:../vault
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -397,7 +397,7 @@ importers:
         specifier: 3.7.0
         version: 3.7.0
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:../config
       '@testing-library/dom':
@@ -439,11 +439,11 @@ importers:
 
   packages/vault:
     dependencies:
-      '@app/db':
+      '@ponctua/db':
         specifier: workspace:*
         version: link:../db
     devDependencies:
-      '@app/config':
+      '@ponctua/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':

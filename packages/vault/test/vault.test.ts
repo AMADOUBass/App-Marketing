@@ -1,5 +1,5 @@
 import { randomUUIDv7 } from 'node:crypto';
-import { createDb, type Db } from '@app/db';
+import { createDb, type Db } from '@ponctua/db';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { Secret, VaultError } from '../src/index.js';

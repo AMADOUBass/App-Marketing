@@ -5,8 +5,8 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { SocialAccountDto } from '@app/contracts';
-import type { Db } from '@app/db';
+import type { SocialAccountDto } from '@ponctua/contracts';
+import type { Db } from '@ponctua/db';
 import {
   buildLoginUrl,
   createGraphClient,
@@ -15,9 +15,9 @@ import {
   GraphApiError,
   instagramCapabilities,
   listAssignedInstagramAccounts,
-} from '@app/integrations';
-import type { Secret } from '@app/vault';
-import { createVaultSealer, type VaultSealer } from '@app/vault/seal';
+} from '@ponctua/integrations';
+import type { Secret } from '@ponctua/vault';
+import { createVaultSealer, type VaultSealer } from '@ponctua/vault/seal';
 import { ZodError } from 'zod';
 import { DB } from '../../common/db.module.js';
 import { ENV, type Env } from '../../config/env.js';

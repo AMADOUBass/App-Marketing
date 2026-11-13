@@ -1,4 +1,4 @@
-import { Button } from '@app/ui';
+import { Button } from '@ponctua/ui';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES, setLanguage } from '../i18n';
 

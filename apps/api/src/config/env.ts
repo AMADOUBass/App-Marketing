@@ -1,4 +1,4 @@
-import { Secret } from '@app/vault';
+import { Secret } from '@ponctua/vault';
 import { z } from 'zod';
 
 /** Secrets are wrapped right at parsing time: printing the env (logs, errors) shows [REDACTED]. */

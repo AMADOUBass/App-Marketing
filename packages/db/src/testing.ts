@@ -1,4 +1,4 @@
-// Test-only helper (import from '@app/db/testing'): a disposable PostgreSQL 18 with the real roles
+// Test-only helper (import from '@ponctua/db/testing'): a disposable PostgreSQL 18 with the real roles
 // and migrations. Requires Docker. @testcontainers/postgresql is a dev dependency of this package,
 // so this entry point must never be imported by production code.
 import { execFileSync } from 'node:child_process';

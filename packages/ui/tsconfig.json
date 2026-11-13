@@ -1,5 +1,5 @@
 {
-  "extends": "@app/config/tsconfig/react.json",
+  "extends": "@ponctua/config/tsconfig/react.json",
   "compilerOptions": {
     "types": ["node"]
   },

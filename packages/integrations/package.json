@@ -1,5 +1,5 @@
 {
-  "name": "@app/integrations",
+  "name": "@ponctua/integrations",
   "version": "0.0.0",
   "private": true,
   "description": "PlatformAdapter contract, capability registry and one adapter per social platform (official APIs only).",
@@ -17,11 +17,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@app/vault": "workspace:*",
+    "@ponctua/vault": "workspace:*",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "@types/node": "26.6.6",
     "eslint": "10.14.0",
     "typescript": "6.0.3",

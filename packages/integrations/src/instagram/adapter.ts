@@ -1,7 +1,7 @@
 // Instagram adapter (Instagram API with Unified Login, ADR 007): single image publishing.
 // Flow documented in https://developers.facebook.com/documentation/instagram-platform/content-publishing
 //   validate (no network) -> quota -> POST /{ig}/media -> GET /{container}?fields=status_code -> POST /{ig}/media_publish
-import type { Secret } from '@app/vault';
+import type { Secret } from '@ponctua/vault';
 import { z, ZodError } from 'zod';
 import { type InstagramCapabilities, instagramCapabilities } from '../capabilities/instagram.js';
 import {

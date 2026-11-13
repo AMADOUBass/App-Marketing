@@ -1,4 +1,4 @@
-import type { Secret } from '@app/vault';
+import type { Secret } from '@ponctua/vault';
 import { z } from 'zod';
 import { instagramCapabilities } from '../capabilities/instagram.js';
 

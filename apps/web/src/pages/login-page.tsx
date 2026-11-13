@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, Input, Label } from '@app/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, Input, Label } from '@ponctua/ui';
 import { useNavigate } from '@tanstack/react-router';
 import { type SubmitEvent, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';

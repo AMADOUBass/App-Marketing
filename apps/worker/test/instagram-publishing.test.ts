@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto';
-import type { FetchLike } from '@app/integrations';
-import { Secret } from '@app/vault';
-import { createVaultSealer } from '@app/vault/seal';
+import type { FetchLike } from '@ponctua/integrations';
+import { Secret } from '@ponctua/vault';
+import { createVaultSealer } from '@ponctua/vault/seal';
 import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { PublishProcessor } from '../src/publish/publish.processor.js';

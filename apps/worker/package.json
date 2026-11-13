@@ -1,5 +1,5 @@
 {
-  "name": "@app/worker",
+  "name": "@ponctua/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,9 +12,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@app/db": "workspace:*",
-    "@app/integrations": "workspace:*",
-    "@app/vault": "workspace:*",
+    "@ponctua/db": "workspace:*",
+    "@ponctua/integrations": "workspace:*",
+    "@ponctua/vault": "workspace:*",
     "@nestjs/common": "12.4.0",
     "@nestjs/core": "12.4.0",
     "bullmq": "6.7.4",
@@ -25,7 +25,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "@nestjs/cli": "12.0.12",
     "@swc/cli": "0.8.2",
     "@swc/core": "1.16.22",

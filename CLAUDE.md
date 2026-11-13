@@ -2,7 +2,7 @@
 
 > Fichier d'instructions pour Claude Code. À placer à la racine du dépôt.
 > Référence complète : document « SaaS social media — Revue critique et spécification v2 ».
-> Nom du produit : **[À DÉFINIR]** — remplacer `@app` partout quand il est choisi.
+> Nom du produit : **Ponctua** (entreprise : Amadoo). Packages internes : `@ponctua/*`.
 
 ---
 
@@ -244,7 +244,7 @@ pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, n
 pnpm typecheck
 pnpm lint
 pnpm test           # unitaires + intégration (Testcontainers)
-pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : pnpm --filter @app/web exec playwright install chromium
+pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : pnpm --filter @ponctua/web exec playwright install chromium
 ```
 
 ---
@@ -273,7 +273,7 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
   bail `PUBLISH_LEASE_SECONDS` : cible bloquée en publication → `unknown_outcome`, jamais republiée à l'aveugle — ADR 005)
 - [x] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
   - [x] 9a coffre à jetons `packages/vault` : tables `organization_keys` / `oauth_credentials` ; X25519 + AES-256-GCM ;
-    l'API scelle (`@app/vault/seal`), seul le worker ouvre (`@app/vault/open`, interdit dans l'api par ESLint) ; type `Secret` (ADR 006)
+    l'API scelle (`@ponctua/vault/seal`), seul le worker ouvre (`@ponctua/vault/open`, interdit dans l'api par ESLint) ; type `Secret` (ADR 006)
   - [x] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités (valeurs sourcées et datées), adaptateur Instagram
     en **Unified Login** (ADR 007) : connexion, conteneur → statut → publication, réconciliation, classement des erreurs ;
     fixtures issues de la doc, à remplacer par des réponses enregistrées en 9c

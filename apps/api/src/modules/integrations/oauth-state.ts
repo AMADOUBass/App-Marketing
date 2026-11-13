@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { Secret } from '@app/vault';
+import type { Secret } from '@ponctua/vault';
 import { z } from 'zod';
 
 /**

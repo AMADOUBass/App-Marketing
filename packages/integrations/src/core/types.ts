@@ -1,4 +1,4 @@
-import type { Secret } from '@app/vault';
+import type { Secret } from '@ponctua/vault';
 
 export type PlatformId = 'facebook' | 'instagram' | 'threads' | 'youtube' | 'linkedin' | 'tiktok';
 

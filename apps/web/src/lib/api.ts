@@ -1,4 +1,4 @@
-import { type ProblemDetails, problemDetailsSchema } from '@app/contracts';
+import { type ProblemDetails, problemDetailsSchema } from '@ponctua/contracts';
 import type { z } from 'zod';
 
 /** Temporary tenant header (ADR 003), replaced by the session cookie with Better Auth. */

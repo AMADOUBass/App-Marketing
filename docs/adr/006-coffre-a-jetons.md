@@ -24,8 +24,8 @@ X25519 (clé éphémère) → HKDF-SHA256 → AES-256-GCM, avec données associ�
 | Paire **d'organisation** | `organization_keys` : publique en clair, privée scellée par la clé maître                               | Clé de données par organisation                                                                              |
 | **Jetons**               | `oauth_credentials.sealed_tokens`                                                                       | Scellés avec la clé publique de l'organisation ; données associées = `organization_id` + `social_account_id` |
 
-- `@app/vault/seal` (API) ne contient aucune clé privée ; `@app/vault/open` (worker) les possède.
-  Une règle ESLint interdit `@app/vault/open` dans `apps/api`, et tout `@app/vault` / `@app/db` dans `apps/web`.
+- `@ponctua/vault/seal` (API) ne contient aucune clé privée ; `@ponctua/vault/open` (worker) les possède.
+  Une règle ESLint interdit `@ponctua/vault/open` dans `apps/api`, et tout `@ponctua/vault` / `@ponctua/db` dans `apps/web`.
 - Type `Secret` : `reveal()` explicite ; `[REDACTED]` dans `JSON.stringify` (donc pino), les chaînes,
   `util.inspect` et les messages d'erreur. Les erreurs du coffre ne contiennent jamais de matériel secret.
 - La paire d'organisation est créée au premier jeton stocké (insertion idempotente, une seule par organisation).

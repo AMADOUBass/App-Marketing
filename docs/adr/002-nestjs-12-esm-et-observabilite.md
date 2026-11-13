@@ -7,7 +7,7 @@
 ## Contexte
 
 CLAUDE.md prévoit NestJS 11. NestJS 12 est sorti le 2026-08-27 (12.4.0 au 8 nov. 2026) ; la 11.2 reste
-maintenue. Les paquets NestJS 12 sont ESM uniquement. Notre config TypeScript (`@app/config`) est déjà ESM
+maintenue. Les paquets NestJS 12 sont ESM uniquement. Notre config TypeScript (`@ponctua/config`) est déjà ESM
 (`module: NodeNext`, `verbatimModuleSyntax`).
 
 NestJS 12 propose aussi `@nestjs/observe`, un SDK d'observabilité intégré.

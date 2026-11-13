@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { createDb, type Db } from '@app/db';
-import type { FetchLike } from '@app/integrations';
-import { createVaultOpener } from '@app/vault/open';
+import { createDb, type Db } from '@ponctua/db';
+import type { FetchLike } from '@ponctua/integrations';
+import { createVaultOpener } from '@ponctua/vault/open';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
 import { DEV_TENANT_HEADER } from '../src/common/tenant.js';
@@ -138,7 +138,7 @@ describe('connecting an Instagram account', () => {
     expect(url.searchParams.get('config_id')).toBe(instagramEnv.INSTAGRAM_CONFIG_ID);
     expect(url.searchParams.get('redirect_uri')).toBe(instagramEnv.INSTAGRAM_REDIRECT_URI);
     expect(res.body).not.toContain(APP_SECRET);
-    const { Secret } = await import('@app/vault');
+    const { Secret } = await import('@ponctua/vault');
     expect(
       verifyOAuthState(new Secret(STATE_SECRET), url.searchParams.get('state') ?? undefined)
         ?.organizationId,

@@ -1,5 +1,5 @@
 import { type DynamicModule, Module } from '@nestjs/common';
-import type { FetchLike } from '@app/integrations';
+import type { FetchLike } from '@ponctua/integrations';
 import { GRAPH_FETCH, InstagramConnectionService } from './instagram-connection.service.js';
 import { IntegrationsController } from './integrations.controller.js';
 

@@ -1,7 +1,7 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
-import type { FetchLike } from '@app/integrations';
+import type { FetchLike } from '@ponctua/integrations';
 import type { DestinationStream } from 'pino';
 import { DbModule } from './common/db.module.js';
 import { ProblemDetailsFilter } from './common/problem-details.filter.js';

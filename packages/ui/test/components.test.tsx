@@ -4,7 +4,7 @@ import { Button, Card, CardTitle, Input, Label } from '../src/index';
 
 afterEach(cleanup);
 
-describe('@app/ui', () => {
+describe('@ponctua/ui', () => {
   it('Button renders a native button, or its child with asChild', () => {
     render(
       <>

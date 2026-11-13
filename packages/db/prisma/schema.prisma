@@ -152,7 +152,7 @@ model OauthCredential {
   organizationId    String    @map("organization_id") @db.Uuid
   socialAccountId   String    @unique @map("social_account_id") @db.Uuid
   organizationKeyId String    @map("organization_key_id") @db.Uuid
-  /// Sealed box (format v1, see @app/vault) of the token JSON.
+  /// Sealed box (format v1, see @ponctua/vault) of the token JSON.
   sealedTokens      Bytes     @map("sealed_tokens")
   scopes            String[]
   /// Access token expiry reported by the platform (never a hardcoded duration).

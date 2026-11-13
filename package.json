@@ -1,5 +1,5 @@
 {
-  "name": "@app/root",
+  "name": "@ponctua/root",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.1.1",
@@ -16,12 +16,12 @@
     "e2e": "turbo run e2e",
     "check": "pnpm format:check && turbo run typecheck lint test --concurrency=4",
     "db:generate": "turbo run generate",
-    "db:migrate": "pnpm --filter @app/db migrate",
-    "db:migrate:dev": "pnpm --filter @app/db migrate:dev",
-    "db:seed": "turbo run build --filter=@app/db && pnpm --filter @app/db seed",
-    "dev:test-post": "turbo run build --filter=@app/db && pnpm --filter @app/db test-post --",
+    "db:migrate": "pnpm --filter @ponctua/db migrate",
+    "db:migrate:dev": "pnpm --filter @ponctua/db migrate:dev",
+    "db:seed": "turbo run build --filter=@ponctua/db && pnpm --filter @ponctua/db seed",
+    "dev:test-post": "turbo run build --filter=@ponctua/db && pnpm --filter @ponctua/db test-post --",
     "tunnel": "docker run --rm --name app-dev-tunnel cloudflare/cloudflared:2026.10.7 tunnel --no-autoupdate --url http://host.docker.internal:5173",
-    "vault:keygen": "turbo run build --filter=@app/vault && pnpm --filter @app/vault keygen",
+    "vault:keygen": "turbo run build --filter=@ponctua/vault && pnpm --filter @ponctua/vault keygen",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose -f infra/compose/docker-compose.dev.yml up -d --wait",
@@ -31,7 +31,7 @@
     "infra:ps": "docker compose -f infra/compose/docker-compose.dev.yml ps"
   },
   "devDependencies": {
-    "@app/config": "workspace:*",
+    "@ponctua/config": "workspace:*",
     "prettier": "3.9.10",
     "turbo": "2.11.10",
     "typescript": "6.0.3"
