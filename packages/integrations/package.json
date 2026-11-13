@@ -1,0 +1,30 @@
+{
+  "name": "@app/integrations",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PlatformAdapter contract, capability registry and one adapter per social platform (official APIs only).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@app/vault": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@app/config": "workspace:*",
+    "@types/node": "26.6.6",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

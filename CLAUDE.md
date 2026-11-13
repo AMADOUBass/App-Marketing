@@ -184,7 +184,9 @@ interface PlatformAdapter {
 - Tests de contrat par adaptateur sur des réponses enregistrées (fixtures), + suite nocturne sur comptes de test réels.
 
 Contraintes à respecter dès le code (détails et sources dans la spec, section 7) :
-- **Instagram** : comptes professionnels seulement ; images JPEG ; média sur URL publique ; concevoir pour 50 posts API / 24 h / compte ; conteneur expire après 24 h.
+- **Instagram** (Unified Login, `graph.facebook.com`, ADR 007) : comptes professionnels seulement ; images JPEG ≤ 8 Mio, ratio 4:5 à 1,91:1 ;
+  média sur URL publique ; limite de publication lue en direct (`content_publishing_limit`, doc contradictoire : 50 ou 100 / 24 h) ;
+  conteneur expire après 24 h ; statut du conteneur interrogé 1×/min, 5 min max ; permissions : `instagram_basic` + `instagram_content_publish` seulement.
 - **TikTok** : appeler `creator_info` avant d'afficher l'écran de publication ; proposer seulement les `privacy_level_options` renvoyées ; respecter `max_video_post_duration_sec` ; ~15 posts/jour/créateur ; sans audit → `SELF_ONLY`.
 - **YouTube** : 100 `videos.insert`/jour par projet par défaut ; programmation native via `status.publishAt` sur vidéo privée ; identifier la chaîne et obtenir le consentement avant chaque action.
 - **LinkedIn** : en-têtes `Linkedin-Version: YYYYMM` et `X-Restli-Protocol-Version: 2.0.0` ; Development Tier = 500 appels/jour/app.
@@ -270,7 +272,9 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 - [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
   - [x] 9a coffre à jetons `packages/vault` : tables `organization_keys` / `oauth_credentials` ; X25519 + AES-256-GCM ;
     l'API scelle (`@app/vault/seal`), seul le worker ouvre (`@app/vault/open`, interdit dans l'api par ESLint) ; type `Secret` (ADR 006)
-  - [ ] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités, adaptateur Instagram d'après la doc officielle (fixtures)
+  - [x] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités (valeurs sourcées et datées), adaptateur Instagram
+    en **Unified Login** (ADR 007) : connexion, conteneur → statut → publication, réconciliation, classement des erreurs ;
+    fixtures issues de la doc, à remplacer par des réponses enregistrées en 9c
   - [ ] 9c essai réel sur le compte Instagram de test (compte développeur Meta requis)
 - [x] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
   (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
