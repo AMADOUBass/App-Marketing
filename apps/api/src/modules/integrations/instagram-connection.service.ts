@@ -12,16 +12,29 @@ import {
   createGraphClient,
   exchangeCodeForToken,
   type FetchLike,
+  GraphApiError,
   instagramCapabilities,
   listAssignedInstagramAccounts,
 } from '@app/integrations';
 import type { Secret } from '@app/vault';
 import { createVaultSealer, type VaultSealer } from '@app/vault/seal';
+import { ZodError } from 'zod';
 import { DB } from '../../common/db.module.js';
 import { ENV, type Env } from '../../config/env.js';
 import { signOAuthState, verifyOAuthState } from './oauth-state.js';
 
 export const GRAPH_FETCH = Symbol('GRAPH_FETCH');
+
+/** Safe diagnostic: error type, HTTP status, Meta codes, trace id, schema paths. Never values. */
+function describeFailure(error: unknown): string {
+  if (error instanceof GraphApiError) {
+    return `GraphApiError http=${String(error.httpStatus)} code=${String(error.code)} subcode=${String(error.subcode)} type=${String(error.type)} fbtrace=${String(error.fbtraceId)}`;
+  }
+  if (error instanceof ZodError) {
+    return `unexpected response shape at ${error.issues.map((issue) => issue.path.join('.') || '(root)').join(', ')}`;
+  }
+  return error instanceof Error ? error.name : 'unknown error';
+}
 
 export type CallbackResult = 'connected' | 'cancelled' | 'invalid_state' | 'no_account' | 'failed';
 
@@ -122,14 +135,20 @@ export class InstagramConnectionService {
     if (!context) return 'invalid_state';
     if (query.error || !query.code) return 'cancelled';
 
+    let step: 'code_exchange' | 'list_accounts' | 'store' = 'code_exchange';
     try {
       const token = await exchangeCodeForToken(this.graph, {
         appId: config.appId,
         appSecret: config.appSecret,
         code: query.code,
+        // Must be identical to the redirect_uri of the login dialog (else 100 / 36008).
+        redirectUri: config.redirectUri,
       });
+      step = 'list_accounts';
       const accounts = await listAssignedInstagramAccounts(this.graph, token.accessToken);
       if (accounts.length === 0) return 'no_account';
+
+      step = 'store';
 
       await this.db.withTenant(context.organizationId, async (tx) => {
         for (const account of accounts) {
@@ -161,10 +180,8 @@ export class InstagramConnectionService {
       });
       return 'connected';
     } catch (error) {
-      // Codes only: the platform message, the code and the token stay out of the logs.
-      this.logger.warn(
-        `Instagram connection failed: ${error instanceof Error ? error.name : 'unknown error'}`,
-      );
+      // Step and codes only: the platform message, the code and the token stay out of the logs.
+      this.logger.warn(`Instagram connection failed at ${step}: ${describeFailure(error)}`);
       return 'failed';
     }
   }

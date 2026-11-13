@@ -67,12 +67,17 @@ describe('code exchange', () => {
       appId: '1604528421424442',
       appSecret: new Secret(APP_SECRET),
       code: 'auth-code',
+      redirectUri: 'https://app.example.com/api/v1/integrations/instagram/callback',
     });
 
     const params = graph.requests[0]?.url.searchParams;
     expect(params?.get('client_id')).toBe('1604528421424442');
     expect(params?.get('client_secret')).toBe(APP_SECRET);
     expect(params?.get('code')).toBe('auth-code');
+    // Required by Meta (manual flow) and identical to the dialog's: else 100 / 36008.
+    expect(params?.get('redirect_uri')).toBe(
+      'https://app.example.com/api/v1/integrations/instagram/callback',
+    );
     expect(token.accessToken).toBeInstanceOf(Secret);
     expect(token.accessToken.reveal()).toBe('EAAG-new-token');
     expect(JSON.stringify(token)).not.toContain('EAAG-new-token');
@@ -89,6 +94,7 @@ describe('code exchange', () => {
       appId: '1',
       appSecret: new Secret(APP_SECRET),
       code: 'bad',
+      redirectUri: 'https://app.example.com/cb',
     }).catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(GraphApiError);
@@ -102,6 +108,7 @@ describe('code exchange', () => {
       appId: '1',
       appSecret: new Secret(APP_SECRET),
       code: 'c',
+      redirectUri: 'https://app.example.com/cb',
     }).then(
       () => new Error('expected the exchange to fail'),
       (error: unknown) => error as Error,

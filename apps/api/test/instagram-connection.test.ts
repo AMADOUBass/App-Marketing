@@ -47,6 +47,17 @@ function fakeGraph(options: { exchangeFails?: boolean } = {}) {
         }),
       );
     if (url.pathname.endsWith('/oauth/access_token')) {
+      // Like Meta (seen on the real account): a missing or different redirect_uri fails with 100 / 36008.
+      if (url.searchParams.get('redirect_uri') !== instagramEnv.INSTAGRAM_REDIRECT_URI) {
+        return json(400, {
+          error: {
+            message: 'Error validating verification code',
+            type: 'OAuthException',
+            code: 100,
+            error_subcode: 36008,
+          },
+        });
+      }
       return options.exchangeFails
         ? json(400, {
             error: {

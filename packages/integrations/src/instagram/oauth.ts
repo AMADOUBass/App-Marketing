@@ -66,10 +66,15 @@ export interface ExchangedToken {
   expiresAt: Date | null;
 }
 
-/** Documented: GET /oauth/access_token with the Meta app id, app secret and the code. */
+/**
+ * GET /oauth/access_token with the Meta app id, app secret, code and the SAME redirect_uri as the login
+ * dialog. The Unified Login page lists only the first three; the Facebook Login manual-flow reference
+ * requires redirect_uri, and the real account confirmed it (without it: code 100 / subcode 36008).
+ * https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow
+ */
 export async function exchangeCodeForToken(
   graph: GraphRequestFn,
-  input: { appId: string; appSecret: Secret; code: string; now?: Date },
+  input: { appId: string; appSecret: Secret; code: string; redirectUri: string; now?: Date },
 ): Promise<ExchangedToken> {
   const response = await graph(
     {
@@ -77,6 +82,7 @@ export async function exchangeCodeForToken(
       path: '/oauth/access_token',
       params: {
         client_id: input.appId,
+        redirect_uri: input.redirectUri,
         client_secret: input.appSecret.reveal(),
         code: input.code,
       },
