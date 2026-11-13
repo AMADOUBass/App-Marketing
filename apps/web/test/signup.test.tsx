@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ORGANIZATION_HEADER } from '../src/lib/api';
 import { useSession } from '../src/lib/session';
-import { authError, me, mockApi, ORG_A, ORG_ID, renderApp, SIGNED_OUT } from './helpers';
+import { me, mockApi, ORG_A, ORG_ID, renderApp, SIGNED_OUT } from './helpers';
 
 async function signUp(name: string, email: string, password: string) {
   await userEvent.type(await screen.findByLabelText('Nom'), name);
@@ -29,25 +29,46 @@ describe('sign-up and onboarding', () => {
     expect(api.to('/api/auth/sign-up/email')).toHaveLength(0);
   });
 
-  it('a new user creates an organization, becomes its owner and lands in it', async () => {
+  it('sign-up asks to confirm the address by email, and opens no session', async () => {
     const api = mockApi({
-      '/api/v1/me': [SIGNED_OUT, { body: me([]) }, { body: me([ORG_A]) }],
-      'POST /api/auth/sign-up/email': { body: { user: { id: 'u' } } },
-      'POST /api/v1/organizations': { status: 201, body: ORG_A },
-      '/api/v1/posts': { body: { items: [], nextCursor: null } },
+      '/api/v1/me': SIGNED_OUT,
+      'POST /api/auth/sign-up/email': { body: { token: null, user: { id: 'u' } } },
     });
-    const { history } = renderApp('/signup');
+    renderApp('/signup');
 
     await signUp('Amélie Tremblay', 'amelie@agence.ca', 'correct-horse-battery');
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Créer votre organisation' }),
-    ).toBeTruthy();
+    const heading = await screen.findByRole('heading', { name: 'Vérifiez vos courriels' });
+    // Focus moves to the outcome, so screen readers announce it.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading);
+    });
+    expect(screen.getByText(/amelie@agence\.ca/)).toBeTruthy();
     expect(api.to('/api/auth/sign-up/email')[0]?.body).toEqual({
       name: 'Amélie Tremblay',
       email: 'amelie@agence.ca',
       password: 'correct-horse-battery',
+      callbackURL: '/email-verified',
     });
+    // The same screen whether or not the address already had an account (the server answers the
+    // same): no "address already used" message exists any more.
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('after the emailed link, a new user creates an organization, becomes its owner and lands in it', async () => {
+    const api = mockApi({
+      '/api/v1/me': [{ body: me([]) }, { body: me([ORG_A]) }],
+      'POST /api/v1/organizations': { status: 201, body: ORG_A },
+      '/api/v1/posts': { body: { items: [], nextCursor: null } },
+    });
+    const { history } = renderApp('/email-verified');
+
+    expect(await screen.findByRole('heading', { name: 'Adresse confirmée' })).toBeTruthy();
+    await userEvent.click(screen.getByRole('link', { name: 'Continuer' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Créer votre organisation' }),
+    ).toBeTruthy();
 
     await userEvent.type(screen.getByLabelText("Nom de l'organisation"), 'Agence Démo A');
     await userEvent.click(screen.getByRole('button', { name: "Créer l'organisation" }));
@@ -73,18 +94,12 @@ describe('sign-up and onboarding', () => {
     expect(api.to('/api/v1/organizations')).toHaveLength(0);
   });
 
-  it('says when the email is already used', async () => {
-    mockApi({
-      '/api/v1/me': SIGNED_OUT,
-      'POST /api/auth/sign-up/email': authError(422, 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'),
-    });
-    renderApp('/signup');
+  it('an invalid or expired confirmation link says so and points to sign-in', async () => {
+    mockApi({ '/api/v1/me': SIGNED_OUT });
+    renderApp('/email-verified?error=invalid_token');
 
-    await signUp('Amélie', 'amelie@agence.ca', 'correct-horse-battery');
-
-    expect((await screen.findByRole('alert')).textContent).toBe(
-      'Un compte existe déjà avec cette adresse. Connectez-vous plutôt.',
-    );
+    expect(await screen.findByRole('heading', { name: 'Lien invalide ou expiré' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Se connecter' }).getAttribute('href')).toBe('/login');
   });
 
   it('links sign-in and sign-up pages both ways', async () => {

@@ -14,7 +14,8 @@
     "submit": "Se connecter",
     "submitting": "Connexion…",
     "noAccount": "Pas encore de compte ?",
-    "signUpLink": "Créer un compte"
+    "signUpLink": "Créer un compte",
+    "forgotPassword": "Mot de passe oublié ?"
   },
   "posts": {
     "title": "Publications",
@@ -62,9 +63,10 @@
       "passwordRequired": "Saisissez votre mot de passe.",
       "passwordTooShort": "Le mot de passe doit contenir au moins {{count}} caractères.",
       "invalidCredentials": "Adresse courriel ou mot de passe incorrect.",
-      "emailTaken": "Un compte existe déjà avec cette adresse. Connectez-vous plutôt.",
       "tooManyAttempts": "Trop de tentatives. Patientez une minute, puis réessayez.",
-      "unknown": "Une erreur est survenue. Réessayez."
+      "unknown": "Une erreur est survenue. Réessayez.",
+      "emailNotVerified": "Votre adresse n'est pas encore confirmée. Nous venons de vous envoyer un nouveau lien : ouvrez-le pour activer votre compte.",
+      "invalidToken": "Ce lien est invalide ou a expiré."
     }
   },
   "signup": {
@@ -73,7 +75,12 @@
     "submit": "Créer mon compte",
     "submitting": "Création du compte…",
     "haveAccount": "Déjà un compte ?",
-    "signInLink": "Se connecter"
+    "signInLink": "Se connecter",
+    "checkEmail": {
+      "title": "Vérifiez vos courriels",
+      "body": "Si cette adresse peut être utilisée, un lien de confirmation vient d’être envoyé à {{email}}. Ouvrez-le pour activer votre compte : il est valable 24 heures.",
+      "help": "Rien reçu après quelques minutes ? Regardez dans les courriels indésirables, ou connectez-vous pour recevoir un nouveau lien."
+    }
   },
   "organizations": {
     "title": "Choisir une organisation",
@@ -106,5 +113,45 @@
   "errors": {
     "page": "Impossible de charger la page.",
     "retry": "Réessayer"
+  },
+  "forgotPassword": {
+    "title": "Mot de passe oublié",
+    "description": "Saisissez l’adresse de votre compte : nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+    "submit": "Envoyer le lien",
+    "submitting": "Envoi…",
+    "backToSignIn": "Retour à la connexion",
+    "sent": {
+      "title": "Vérifiez vos courriels",
+      "body": "Si un compte existe pour {{email}}, un lien de réinitialisation vient d’être envoyé. Il est valable 1 heure.",
+      "help": "Rien reçu après quelques minutes ? Regardez dans les courriels indésirables, puis réessayez."
+    }
+  },
+  "resetPassword": {
+    "title": "Nouveau mot de passe",
+    "description": "Choisissez votre nouveau mot de passe. Toutes vos sessions ouvertes seront fermées.",
+    "newPassword": "Nouveau mot de passe",
+    "submit": "Enregistrer le mot de passe",
+    "submitting": "Enregistrement…",
+    "done": {
+      "title": "Mot de passe modifié",
+      "body": "Votre mot de passe a été changé et toutes vos sessions ont été fermées. Connectez-vous avec le nouveau."
+    },
+    "invalid": {
+      "title": "Lien invalide ou expiré",
+      "body": "Ce lien de réinitialisation ne fonctionne plus : il a peut-être déjà servi ou dépassé 1 heure.",
+      "again": "Demander un nouveau lien"
+    }
+  },
+  "emailVerified": {
+    "title": "Confirmation de l’adresse",
+    "done": {
+      "title": "Adresse confirmée",
+      "body": "Votre adresse courriel est confirmée et vous êtes connecté.",
+      "continue": "Continuer"
+    },
+    "invalid": {
+      "title": "Lien invalide ou expiré",
+      "body": "Ce lien de confirmation ne fonctionne plus. Connectez-vous : un nouveau lien vous sera envoyé."
+    }
   }
 }

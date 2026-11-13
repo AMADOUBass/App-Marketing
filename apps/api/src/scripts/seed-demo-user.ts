@@ -8,6 +8,10 @@ import { createIdentityClient } from '@ponctua/db/identity';
 import { z } from 'zod';
 import { parseEnv } from '../config/env.js';
 import { createAuth } from '../modules/identity/auth.js';
+import type { Mailer } from '../modules/identity/mailer.js';
+
+/** The demo address is not a real inbox: nothing to send, it is marked verified below. */
+const noMail: Mailer = { send: () => Promise.resolve() };
 
 function extraOrganizations(argv: string[]): string[] {
   const ids: string[] = [];
@@ -28,8 +32,11 @@ const db = createDb({ connectionString: env.DATABASE_URL });
 try {
   let user = await identity.user.findUnique({ where: { email: DEMO_USER.email } });
   if (!user) {
-    await createAuth(env, identity).api.signUpEmail({ body: { ...DEMO_USER } });
+    await createAuth(env, identity, noMail).api.signUpEmail({ body: { ...DEMO_USER } });
     user = await identity.user.findUniqueOrThrow({ where: { email: DEMO_USER.email } });
+  }
+  if (!user.emailVerified) {
+    user = await identity.user.update({ where: { id: user.id }, data: { emailVerified: true } });
   }
   const userId = user.id;
 

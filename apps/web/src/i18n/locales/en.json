@@ -14,7 +14,8 @@
     "submit": "Sign in",
     "submitting": "Signing in…",
     "noAccount": "No account yet?",
-    "signUpLink": "Create an account"
+    "signUpLink": "Create an account",
+    "forgotPassword": "Forgot password?"
   },
   "posts": {
     "title": "Posts",
@@ -62,9 +63,10 @@
       "passwordRequired": "Enter your password.",
       "passwordTooShort": "The password must be at least {{count}} characters long.",
       "invalidCredentials": "Incorrect email address or password.",
-      "emailTaken": "An account already exists with this address. Sign in instead.",
       "tooManyAttempts": "Too many attempts. Wait a minute, then try again.",
-      "unknown": "Something went wrong. Try again."
+      "unknown": "Something went wrong. Try again.",
+      "emailNotVerified": "Your address is not confirmed yet. We just sent you a new link: open it to activate your account.",
+      "invalidToken": "This link is invalid or has expired."
     }
   },
   "signup": {
@@ -73,7 +75,12 @@
     "submit": "Create my account",
     "submitting": "Creating account…",
     "haveAccount": "Already have an account?",
-    "signInLink": "Sign in"
+    "signInLink": "Sign in",
+    "checkEmail": {
+      "title": "Check your inbox",
+      "body": "If this address can be used, a confirmation link was just sent to {{email}}. Open it to activate your account: it is valid for 24 hours.",
+      "help": "Nothing after a few minutes? Check your spam folder, or sign in to get a new link."
+    }
   },
   "organizations": {
     "title": "Choose an organization",
@@ -106,5 +113,45 @@
   "errors": {
     "page": "The page could not be loaded.",
     "retry": "Try again"
+  },
+  "forgotPassword": {
+    "title": "Forgot password",
+    "description": "Enter the address of your account: we will send you a link to choose a new password.",
+    "submit": "Send the link",
+    "submitting": "Sending…",
+    "backToSignIn": "Back to sign in",
+    "sent": {
+      "title": "Check your inbox",
+      "body": "If an account exists for {{email}}, a reset link was just sent. It is valid for 1 hour.",
+      "help": "Nothing after a few minutes? Check your spam folder, then try again."
+    }
+  },
+  "resetPassword": {
+    "title": "New password",
+    "description": "Choose your new password. Every open session will be signed out.",
+    "newPassword": "New password",
+    "submit": "Save the password",
+    "submitting": "Saving…",
+    "done": {
+      "title": "Password changed",
+      "body": "Your password was changed and every session was signed out. Sign in with the new one."
+    },
+    "invalid": {
+      "title": "Invalid or expired link",
+      "body": "This reset link no longer works: it may have been used already or be older than 1 hour.",
+      "again": "Ask for a new link"
+    }
+  },
+  "emailVerified": {
+    "title": "Address confirmation",
+    "done": {
+      "title": "Address confirmed",
+      "body": "Your email address is confirmed and you are signed in.",
+      "continue": "Continue"
+    },
+    "invalid": {
+      "title": "Invalid or expired link",
+      "body": "This confirmation link no longer works. Sign in: a new link will be sent to you."
+    }
   }
 }

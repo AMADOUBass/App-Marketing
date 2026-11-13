@@ -7,6 +7,7 @@ const AUTH = {
   BETTER_AUTH_SECRET: 'x'.repeat(32),
   BETTER_AUTH_URL: 'http://localhost:5173',
   AUTH_DATABASE_URL: 'postgresql://app_auth:secret@127.0.0.1:5432/app',
+  SMTP_URL: 'smtp://127.0.0.1:1025',
 };
 
 describe('parseEnv', () => {
@@ -24,6 +25,15 @@ describe('parseEnv', () => {
     });
     // The secret is wrapped: it never prints.
     expect(String(env.BETTER_AUTH_SECRET)).not.toContain('xxxx');
+  });
+
+  it('requires an SMTP URL and never prints it (it may carry credentials)', () => {
+    const { SMTP_URL: _smtp, ...withoutSmtp } = AUTH;
+    expect(() => parseEnv({ DATABASE_URL, ...withoutSmtp })).toThrow(/SMTP_URL/);
+    expect(() => parseEnv({ DATABASE_URL, ...AUTH, SMTP_URL: 'http://mail' })).toThrow(/SMTP_URL/);
+    const env = parseEnv({ DATABASE_URL, ...AUTH, SMTP_URL: 'smtps://user:pa55word@smtp.example' });
+    expect(JSON.stringify(env)).not.toContain('pa55word');
+    expect(env.MAIL_FROM).toBe('Ponctua <no-reply@ponctua.local>');
   });
 
   it('requires the authentication settings', () => {

@@ -1,20 +1,18 @@
 import { PASSWORD_MIN_LENGTH, signUpSchema } from '@ponctua/contracts';
 import { Button, Card, CardContent, CardDescription, CardHeader } from '@ponctua/ui';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useMutation } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { type ChangeEvent, type SubmitEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, focusFirstInvalid } from '../components/form-field';
+import { OutcomePanel, textLinkClass } from '../components/outcome-panel';
 import { AuthError, authApi } from '../lib/auth';
-import { meQuery } from '../lib/me';
 
 const FIELDS = ['name', 'email', 'password'] as const;
 type Field = (typeof FIELDS)[number];
 
 export function SignUpPage() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [values, setValues] = useState<Record<Field, string>>({
     name: '',
     email: '',
@@ -22,14 +20,9 @@ export function SignUpPage() {
   });
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
 
-  const signUp = useMutation({
-    mutationFn: authApi.signUp,
-    onSuccess: async () => {
-      // Signed in right away (session cookie): the home route sends a new user to create an organization.
-      queryClient.removeQueries({ queryKey: meQuery.queryKey });
-      await navigate({ to: '/' });
-    },
-  });
+  // No session yet: the emailed link opens it (ADR 009). The answer is the same for an address that
+  // already has an account, so the next screen says the same thing in both cases.
+  const signUp = useMutation({ mutationFn: authApi.signUp });
 
   const messages: Record<Field, string> = {
     name: t('auth.errors.nameRequired'),
@@ -70,43 +63,55 @@ export function SignUpPage() {
   return (
     <>
       <h1 className="mb-6 text-2xl font-semibold">{t('signup.title')}</h1>
-      <Card>
-        <CardHeader>
-          <CardDescription>{t('signup.description')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form noValidate onSubmit={onSubmit} className="grid gap-4">
-            <FormField label={t('auth.name')} autoComplete="name" {...field('name')} />
-            <FormField
-              label={t('auth.email')}
-              type="email"
-              autoComplete="email"
-              {...field('email')}
-            />
-            <FormField
-              label={t('auth.password')}
-              type="password"
-              autoComplete="new-password"
-              hint={t('auth.passwordHint', { count: PASSWORD_MIN_LENGTH })}
-              {...field('password')}
-            />
-            {signUp.isError && (
-              <p role="alert" className="text-sm font-medium text-destructive">
-                {t(`auth.errors.${failure}`, { count: PASSWORD_MIN_LENGTH })}
-              </p>
-            )}
-            <Button type="submit" className="w-fit" disabled={signUp.isPending}>
-              {signUp.isPending ? t('signup.submitting') : t('signup.submit')}
-            </Button>
-          </form>
-          <p className="mt-6 text-sm">
-            {t('signup.haveAccount')}{' '}
-            <Link to="/login" className="font-medium underline underline-offset-4">
+      {signUp.isSuccess ? (
+        <OutcomePanel title={t('signup.checkEmail.title')}>
+          <p>{t('signup.checkEmail.body', { email: signUp.variables.email })}</p>
+          <p className="text-muted-foreground">{t('signup.checkEmail.help')}</p>
+          <p>
+            <Link to="/login" className={textLinkClass}>
               {t('signup.signInLink')}
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </OutcomePanel>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('signup.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form noValidate onSubmit={onSubmit} className="grid gap-4">
+              <FormField label={t('auth.name')} autoComplete="name" {...field('name')} />
+              <FormField
+                label={t('auth.email')}
+                type="email"
+                autoComplete="email"
+                {...field('email')}
+              />
+              <FormField
+                label={t('auth.password')}
+                type="password"
+                autoComplete="new-password"
+                hint={t('auth.passwordHint', { count: PASSWORD_MIN_LENGTH })}
+                {...field('password')}
+              />
+              {signUp.isError && (
+                <p role="alert" className="text-sm font-medium text-destructive">
+                  {t(`auth.errors.${failure}`, { count: PASSWORD_MIN_LENGTH })}
+                </p>
+              )}
+              <Button type="submit" className="w-fit" disabled={signUp.isPending}>
+                {signUp.isPending ? t('signup.submitting') : t('signup.submit')}
+              </Button>
+            </form>
+            <p className="mt-6 text-sm">
+              {t('signup.haveAccount')}{' '}
+              <Link to="/login" className={textLinkClass}>
+                {t('signup.signInLink')}
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

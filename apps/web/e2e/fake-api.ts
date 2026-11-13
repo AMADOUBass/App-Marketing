@@ -12,6 +12,8 @@ interface FakeUser {
   name: string;
   email: string;
   password: string;
+  /** Address confirmed through the emailed link (required before signing in, ADR 009). */
+  verified?: boolean;
   organizations: FakeOrganization[];
 }
 
@@ -36,6 +38,8 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
   const accounts: FakeUser[] = users.map((user) => ({ ...user, id: nextId() }));
   let session: FakeUser | null = null;
   const organizationHeaders: string[] = [];
+  /** Reset links "emailed" so far: token -> account. */
+  const resetTokens = new Map<string, FakeUser>();
 
   await page.route('**/api/auth/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -44,23 +48,36 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
     if (path === '/api/auth/sign-in/email') {
       const user = accounts.find((u) => u.email === body.email && u.password === body.password);
       if (!user) return json(route, 401, { code: 'INVALID_EMAIL_OR_PASSWORD' });
+      if (user.verified === false) return json(route, 403, { code: 'EMAIL_NOT_VERIFIED' });
       session = user;
       return json(route, 200, { user: { id: user.id } });
     }
     if (path === '/api/auth/sign-up/email') {
-      if (accounts.some((u) => u.email === body.email)) {
-        return json(route, 422, { code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' });
+      // Like the real API: same answer for a taken address, and no session before confirmation.
+      if (!accounts.some((u) => u.email === body.email)) {
+        accounts.push({
+          id: nextId(),
+          name: body.name ?? '',
+          email: body.email ?? '',
+          password: body.password ?? '',
+          verified: false,
+          organizations: [],
+        });
       }
-      const user: FakeUser = {
-        id: nextId(),
-        name: body.name ?? '',
-        email: body.email ?? '',
-        password: body.password ?? '',
-        organizations: [],
-      };
-      accounts.push(user);
-      session = user;
-      return json(route, 200, { user: { id: user.id } });
+      return json(route, 200, { token: null, user: { id: nextId() } });
+    }
+    if (path === '/api/auth/request-password-reset') {
+      const user = accounts.find((u) => u.email === body.email);
+      if (user) resetTokens.set(`reset${String(resetTokens.size + 1)}`, user);
+      return json(route, 200, { status: true });
+    }
+    if (path === '/api/auth/reset-password') {
+      const user = resetTokens.get(body.token ?? '');
+      if (!user) return json(route, 400, { code: 'INVALID_TOKEN' });
+      resetTokens.delete(body.token ?? '');
+      user.password = body.newPassword ?? '';
+      session = null;
+      return json(route, 200, { status: true });
     }
     if (path === '/api/auth/sign-out') {
       session = null;
@@ -119,5 +136,16 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
     return json(route, 404, problem(404, 'Not Found'));
   });
 
-  return { organizationHeaders };
+  return {
+    organizationHeaders,
+    /** What opening the emailed confirmation link does: verifies the address and signs in. */
+    confirmEmail(email: string) {
+      const user = accounts.find((u) => u.email === email);
+      if (!user) throw new Error(`no account for ${email}`);
+      user.verified = true;
+      session = user;
+    },
+    /** Tokens of the reset links "emailed" so far. */
+    resetTokens: () => [...resetTokens.keys()],
+  };
 }

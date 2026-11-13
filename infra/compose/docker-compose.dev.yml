@@ -49,6 +49,22 @@ services:
       timeout: 3s
       retries: 10
 
+  # Catches every email sent in development (ADR 009): nothing leaves the machine.
+  # Inbox: http://localhost:8025 — SMTP: 127.0.0.1:1025.
+  mail:
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 500
+    ports:
+      - 127.0.0.1:${MAIL_SMTP_PORT:-1025}:1025
+      - 127.0.0.1:${MAIL_UI_PORT:-8025}:8025
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # S3-compatible storage standing in for Cloudflare R2 (see docs/adr/001).
   storage:
     image: rustfs/rustfs:1.0.4

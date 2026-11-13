@@ -69,8 +69,8 @@ Option **B**.
     Better Auth ne contrôle l'origine que si la requête porte les en-têtes Fetch Metadata (`Sec-Fetch-*`),
     ce que font tous les navigateurs actuels ; un client hors navigateur peut forger `Origin` de toute façon.
 12. **Messages d'erreur** : « courriel ou mot de passe incorrect » est identique que le compte existe ou
-    non (testé). L'inscription, elle, dit « adresse déjà utilisée » : c'est la limite connue de toute
-    inscription ouverte ; la vérification d'e-mail (étape 3) permettra de répondre de façon neutre.
+    non (testé). Depuis l'ADR 009 (vérification d'adresse obligatoire), l'inscription répond aussi pareil
+    pour une adresse déjà utilisée.
 13. **Logs** : les messages de Better Auth passent par le logger Nest (pino, JSON), sans leurs arguments
     supplémentaires, qui pourraient contenir des données de requête.
 

@@ -11,6 +11,7 @@ import { createLoggerParams } from './config/logger.js';
 import { ContentModule } from './modules/content/content.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import type { Mailer } from './modules/identity/mailer.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 
@@ -19,6 +20,8 @@ export interface AppModuleOptions {
   logStream?: DestinationStream;
   /** Replaces the network for Meta Graph API calls (tests use a fake Graph API). */
   graphFetch?: FetchLike;
+  /** Replaces SMTP (tests read the emails from a fake mailbox). */
+  mailer?: Mailer;
 }
 
 @Module({})
@@ -30,7 +33,7 @@ export class AppModule {
       imports: [
         LoggerModule.forRoot(createLoggerParams(env, options.logStream)),
         DbModule,
-        IdentityModule,
+        IdentityModule.register(options.mailer),
         TenancyModule,
         HealthModule,
         ContentModule,

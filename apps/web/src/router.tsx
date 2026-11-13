@@ -13,10 +13,13 @@ import { RouteError } from './components/route-error';
 import { meQuery } from './lib/me';
 import { useSession } from './lib/session';
 import { AccountsPage, CONNECT_RESULTS, type ConnectResult } from './pages/accounts-page';
+import { EmailVerifiedPage } from './pages/email-verified-page';
+import { ForgotPasswordPage } from './pages/forgot-password-page';
 import { LoginPage } from './pages/login-page';
 import { NewOrganizationPage } from './pages/new-organization-page';
 import { OrganizationsPage } from './pages/organizations-page';
 import { PostsPage } from './pages/posts-page';
+import { ResetPasswordPage } from './pages/reset-password-page';
 import { SignUpPage } from './pages/signup-page';
 
 interface RouterContext {
@@ -79,6 +82,45 @@ const signUpRoute = createRoute({
   component: SignUpPage,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  beforeLoad: guestOnly,
+  component: ForgotPasswordPage,
+});
+
+/** Only short opaque strings are taken from the address bar. */
+const searchString = (value: unknown): string | undefined =>
+  typeof value === 'string' && /^[\w.-]{1,512}$/.test(value) ? value : undefined;
+
+/** Landing pages of the emailed links: open to everyone (the link itself is the credential). */
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  validateSearch: (search: Record<string, unknown>): { token?: string; error?: string } => {
+    const token = searchString(search.token);
+    const error = searchString(search.error);
+    return { ...(token ? { token } : {}), ...(error ? { error } : {}) };
+  },
+  component: function ResetPasswordRoute() {
+    const { token, error } = resetPasswordRoute.useSearch();
+    return <ResetPasswordPage {...(token ? { token } : {})} {...(error ? { error } : {})} />;
+  },
+});
+
+const emailVerifiedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/email-verified',
+  validateSearch: (search: Record<string, unknown>): { error?: string } => {
+    const error = searchString(search.error);
+    return error ? { error } : {};
+  },
+  component: function EmailVerifiedRoute() {
+    const { error } = emailVerifiedRoute.useSearch();
+    return <EmailVerifiedPage {...(error ? { error } : {})} />;
+  },
+});
+
 const requireUser = async ({ context }: { context: RouterContext }) => {
   if (!(await loadMe(context.queryClient))) throw redirect({ to: '/login' });
 };
@@ -139,6 +181,9 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   signUpRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
+  emailVerifiedRoute,
   organizationsRoute,
   newOrganizationRoute,
   appRoute.addChildren([postsRoute, accountsRoute]),

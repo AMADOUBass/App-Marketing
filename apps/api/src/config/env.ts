@@ -51,6 +51,10 @@ export const envSchema = z
     /** Identity database role (app_auth): schema "auth" only. */
     AUTH_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 
+    /** Outgoing mail (ADR 009): smtp://127.0.0.1:1025 = Mailpit in development. May carry credentials. */
+    SMTP_URL: z.url({ protocol: /^smtps?$/ }).transform((value) => new Secret(value)),
+    MAIL_FROM: z.string().min(3).default('Ponctua <no-reply@ponctua.local>'),
+
     /** Meta app id (public). */
     META_APP_ID: z.string().regex(/^\d+$/).optional(),
     /** Meta app secret: server side only, never logged (rule 3). */

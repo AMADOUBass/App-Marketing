@@ -84,9 +84,17 @@ export function LoginPage() {
                 {t(`auth.errors.${failure}`)}
               </p>
             )}
-            <Button type="submit" className="w-fit" disabled={signIn.isPending}>
-              {signIn.isPending ? t('login.submitting') : t('login.submit')}
-            </Button>
+            <div className="flex flex-wrap items-center gap-4">
+              <Button type="submit" disabled={signIn.isPending}>
+                {signIn.isPending ? t('login.submitting') : t('login.submit')}
+              </Button>
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium underline underline-offset-4"
+              >
+                {t('login.forgotPassword')}
+              </Link>
+            </div>
           </form>
           <p className="mt-6 text-sm">
             {t('login.noAccount')}{' '}

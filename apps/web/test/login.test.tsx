@@ -65,6 +65,31 @@ describe('sign-in', () => {
     );
   });
 
+  it('an unconfirmed address is told a new link was sent', async () => {
+    mockApi({
+      '/api/v1/me': SIGNED_OUT,
+      'POST /api/auth/sign-in/email': authError(403, 'EMAIL_NOT_VERIFIED'),
+    });
+    renderApp('/login');
+
+    await fillAndSubmit('amelie@agence.ca', 'correct-horse-battery');
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      "Votre adresse n'est pas encore confirmée.",
+    );
+  });
+
+  it('leads to the forgotten-password page', async () => {
+    mockApi({ '/api/v1/me': SIGNED_OUT });
+    renderApp('/login');
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Mot de passe oublié ?' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Mot de passe oublié' }),
+    ).toBeTruthy();
+  });
+
   it('asks to wait after too many attempts (429)', async () => {
     mockApi({
       '/api/v1/me': SIGNED_OUT,
@@ -93,7 +118,11 @@ describe('sign-in', () => {
       expect(history.location.pathname).toBe('/posts');
     });
     const [signIn] = api.to('/api/auth/sign-in/email');
-    expect(signIn?.body).toEqual({ email: 'amelie@agence.ca', password: 'correct-horse-battery' });
+    expect(signIn?.body).toEqual({
+      email: 'amelie@agence.ca',
+      password: 'correct-horse-battery',
+      callbackURL: '/email-verified',
+    });
     expect(signIn?.credentials).toBe('same-origin');
     expect(useSession.getState().organizationId).toBe(ORG_ID);
     await waitFor(() => {

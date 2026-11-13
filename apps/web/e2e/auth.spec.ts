@@ -16,8 +16,10 @@ test.describe('French-Canadian browser', () => {
   // The app follows the browser language by default.
   test.use({ locale: 'fr-CA' });
 
-  test('sign up, create the organization, see its posts, sign out', async ({ page }) => {
-    await installFakeApi(page);
+  test('sign up, confirm the address, create the organization, see its posts, sign out', async ({
+    page,
+  }) => {
+    const api = await installFakeApi(page);
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/login$/);
@@ -39,6 +41,15 @@ test.describe('French-Canadian browser', () => {
     await page.getByLabel('Mot de passe').fill(PASSWORD);
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
 
+    // No session yet: the emailed link opens it.
+    await expect(page.getByRole('heading', { name: 'Vérifiez vos courriels' })).toBeFocused();
+    await expectNoAccessibilityViolations(page);
+    api.confirmEmail('amelie@agence.ca');
+    await page.goto('/email-verified');
+    await expect(page.getByRole('heading', { name: 'Adresse confirmée' })).toBeVisible();
+    await expectNoAccessibilityViolations(page);
+    await page.getByRole('link', { name: 'Continuer' }).click();
+
     await expect(
       page.getByRole('heading', { level: 1, name: 'Créer votre organisation' }),
     ).toBeVisible();
@@ -57,6 +68,35 @@ test.describe('French-Canadian browser', () => {
     // Signed out for real: the app pages send back to sign-in.
     await page.goto('/posts');
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('forgotten password: ask for a link, set a new password, sign in with it', async ({
+    page,
+  }) => {
+    const api = await installFakeApi(page, [
+      { name: 'Amélie', email: 'amelie@agence.ca', password: PASSWORD, organizations: [] },
+    ]);
+    await page.goto('/login');
+    await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
+
+    await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
+    await page.getByRole('button', { name: 'Envoyer le lien' }).click();
+    await expect(page.getByRole('heading', { name: 'Vérifiez vos courriels' })).toBeFocused();
+    await expectNoAccessibilityViolations(page);
+
+    // Opening the emailed link: the token leaves the address bar at once.
+    await page.goto(`/reset-password?token=${api.resetTokens()[0] ?? ''}`);
+    await expect(page).toHaveURL(/\/reset-password$/);
+    await expectNoAccessibilityViolations(page);
+    await page.getByLabel('Nouveau mot de passe').fill('a-brand-new-passphrase');
+    await page.getByRole('button', { name: 'Enregistrer le mot de passe' }).click();
+    await expect(page.getByRole('heading', { name: 'Mot de passe modifié' })).toBeFocused();
+
+    await page.getByRole('link', { name: 'Se connecter' }).click();
+    await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
+    await page.getByLabel('Mot de passe').fill('a-brand-new-passphrase');
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page).toHaveURL(/\/organizations\/new$/);
   });
 
   test('a wrong password gets one message, whatever was wrong', async ({ page }) => {

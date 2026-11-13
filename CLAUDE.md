@@ -231,7 +231,8 @@ E2E pour les flux critiques ; traces et métriques ; textes FR/EN ; accessibilit
 
 ```bash
 pnpm install
-pnpm infra:up       # postgres, valkey, rustfs (attend qu'ils soient healthy) ; infra:down, infra:reset, infra:logs, infra:ps
+pnpm infra:up       # postgres, valkey, rustfs, mailpit (attend qu'ils soient healthy) ; infra:down, infra:reset, infra:logs, infra:ps
+                    # courriels de dev (vérification, réinitialisation) : http://localhost:8025 (Mailpit, ADR 009)
 pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
 pnpm dev            # web (http://localhost:5173) + api (:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env
@@ -289,7 +290,9 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 - [x] 1. Serveur : schéma `auth` (rôle `app_auth` seul), `/api/auth/*`, `GET /api/v1/me`, `POST /api/v1/organizations`,
   `TenantGuard` session → `x-organization-id` → adhésion (401 / 400 / 403) ; jeton jamais dans le JSON
 - [x] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; limite de débit ; `x-dev-organization-id` supprimé (ADR 003 remplacé)
-- [ ] 3. 2FA TOTP, passkeys, vérification d'e-mail et réinitialisation (Mailpit en dev)
+- [x] 3a. Vérification d'adresse obligatoire, mot de passe oublié, courriels SMTP (Mailpit en dev), jetons hachés (ADR 009)
+- [ ] 3b. 2FA TOTP (page Sécurité, codes de secours, changement de mot de passe)
+- [ ] 3c. Passkeys (`@better-auth/passkey`)
 
 **Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.
