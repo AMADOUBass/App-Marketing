@@ -5,6 +5,8 @@ import { parseArgs } from 'node:util';
 import { createDb } from './tenant.js';
 
 const { values } = parseArgs({
+  // pnpm forwards a literal "--" when the command already has one: ignore it.
+  args: process.argv.slice(2).filter((arg) => arg !== '--'),
   options: {
     org: { type: 'string' },
     image: { type: 'string' },
