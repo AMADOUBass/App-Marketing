@@ -12,6 +12,9 @@ export default defineConfig({
     strictPort: true,
     // Same origin in development: no CORS. The API runs on 127.0.0.1:3000 (pnpm dev).
     proxy: { '/api': 'http://127.0.0.1:3000' },
+    // `pnpm tunnel` (Cloudflare quick tunnel) gives a public HTTPS URL for Meta's redirect and for test
+    // images. Vite rejects unknown Host headers (DNS rebinding protection): allow only those tunnels.
+    allowedHosts: ['.trycloudflare.com'],
   },
   test: {
     environment: 'jsdom',

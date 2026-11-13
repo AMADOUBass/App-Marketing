@@ -4,6 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MainNav } from '../components/main-nav';
 import { ApiError, apiGet } from '../lib/api';
 import { useSession } from '../lib/session';
 
@@ -47,6 +48,7 @@ export function PostsPage() {
 
   return (
     <>
+      <MainNav />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{t('posts.title')}</h1>

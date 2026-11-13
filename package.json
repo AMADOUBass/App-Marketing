@@ -19,6 +19,8 @@
     "db:migrate": "pnpm --filter @app/db migrate",
     "db:migrate:dev": "pnpm --filter @app/db migrate:dev",
     "db:seed": "turbo run build --filter=@app/db && pnpm --filter @app/db seed",
+    "dev:test-post": "turbo run build --filter=@app/db && pnpm --filter @app/db test-post --",
+    "tunnel": "docker run --rm --name app-dev-tunnel cloudflare/cloudflared:2026.10.7 tunnel --no-autoupdate --url http://host.docker.internal:5173",
     "vault:keygen": "turbo run build --filter=@app/vault && pnpm --filter @app/vault keygen",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

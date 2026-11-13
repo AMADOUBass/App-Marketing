@@ -28,5 +28,29 @@
     "loadMore": "Charger plus",
     "loadingMore": "Chargement…",
     "updatedAt": "Modifiée le {{date}}"
+  },
+  "nav": {
+    "label": "Navigation principale",
+    "posts": "Publications",
+    "accounts": "Comptes connectés"
+  },
+  "accounts": {
+    "title": "Comptes connectés",
+    "loading": "Chargement des comptes…",
+    "empty": "Aucun compte connecté pour l'instant.",
+    "error": "Impossible de charger les comptes.",
+    "connected": "Connecté",
+    "notConnected": "À reconnecter",
+    "connectInstagram": "Connecter Instagram",
+    "redirecting": "Redirection vers Meta…",
+    "notConfigured": "La connexion Instagram n'est pas encore configurée sur ce serveur.",
+    "connectError": "Impossible de démarrer la connexion à Instagram.",
+    "result": {
+      "connected": "Votre compte Instagram est connecté.",
+      "cancelled": "Connexion annulée : aucun compte n'a été ajouté.",
+      "invalid_state": "La connexion a expiré ou n'est pas valide. Recommencez.",
+      "no_account": "Aucun compte Instagram professionnel n'a été partagé avec l'application.",
+      "failed": "La connexion à Instagram a échoué. Réessayez."
+    }
   }
 }

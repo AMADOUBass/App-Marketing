@@ -32,3 +32,7 @@ packages/db/src/generated/
 # Playwright
 test-results/
 playwright-report/
+
+# Local test media served through the dev tunnel
+apps/web/public/dev-media/*
+!apps/web/public/dev-media/README.md

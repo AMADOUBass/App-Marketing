@@ -45,3 +45,20 @@ documentation officielle (vérifiée le 2026-11-13) indique :
   `instagram_manage_messages` (marquée requise par défaut).
 - Les fixtures de test sont issues de la documentation et marquées comme telles ; elles seront remplacées par
   des réponses enregistrées.
+
+## Complément 0.9c (2026-11-13)
+
+- **Connexion** : `GET /api/v1/integrations/instagram/connect` (organisation requise) renvoie l'URL de Meta ;
+  `GET /api/v1/integrations/instagram/callback` (public) vérifie un `state` **signé HMAC-SHA256**, valable
+  10 minutes, qui porte l'organisation et le workspace. Le retour de Meta n'a pas d'en-tête d'organisation :
+  c'est la signature qui prouve où ranger le compte. Le jeton va directement dans le coffre, scellé.
+- **Publication** : `InstagramPublishHandler` (worker) ouvre le jeton, appelle l'adaptateur hors transaction,
+  enregistre l'id du conteneur dans `publish_attempts` dès sa création. Derrière le feature flag
+  `INSTAGRAM_PUBLISHING_ENABLED` (désactivé → `needs_action`, rien n'est envoyé).
+- **Résultat → état** : publié (confirmé) → `published` ; erreur `auth` → `needs_action` ; pas de réponse →
+  `unknown_outcome` ; autres erreurs → `failed` avec leur classe. Pas encore de réessai automatique : il
+  viendra avec le moteur de publication (MVP).
+- **Image** : colonne provisoire `posts.image_url` (URL HTTPS publique d'un JPEG) en attendant la médiathèque.
+- **Tunnel de dev** : `pnpm tunnel` lance `cloudflare/cloudflared:2026.10.7` dans Docker (tunnel rapide, sans
+  compte) vers le serveur Vite, qui relaie `/api`. L'adresse change à chaque lancement : la remettre dans Meta
+  (URL de redirection) et dans `apps/api/.env`. Vite n'accepte que `*.trycloudflare.com` comme hôte externe.

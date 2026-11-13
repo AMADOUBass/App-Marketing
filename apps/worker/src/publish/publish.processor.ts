@@ -11,7 +11,13 @@ import type { Logger } from 'pino';
 import { PUBLISH_QUEUE, type PublishJobData } from '../common/queues.js';
 import { DB, LOGGER, VALKEY } from '../common/tokens.js';
 import { ENV, type Env } from '../config/env.js';
-import { PUBLISH_HANDLER, type PublishHandler } from './publish-handler.js';
+import {
+  type AttemptData,
+  PUBLISH_HANDLER,
+  type PublishHandler,
+  type PublishHooks,
+  type PublishResult,
+} from './publish-handler.js';
 
 export type ProcessResult = 'skipped' | PublicationState;
 
@@ -85,29 +91,47 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
       return 'skipped';
     }
 
-    let outcome: PublicationState;
-    let errorClass: 'unknown' | null = null;
+    const attemptWhere = { targetId: job.targetId, attemptNo: job.attemptNo };
+    let progress: AttemptData = {};
+    const hooks: PublishHooks = {
+      recordProgress: async (data) => {
+        progress = { ...progress, ...data };
+        await this.db.withTenant(job.organizationId, (tx) =>
+          tx.publishAttempt.updateMany({ where: attemptWhere, data: { response: progress } }),
+        );
+      },
+    };
+
+    let result: PublishResult;
     try {
-      outcome = await this.handler.publish({
-        organizationId: job.organizationId,
-        targetId: job.targetId,
-        attemptNo: job.attemptNo,
-        postId: target.postId,
-        socialAccountId: target.socialAccountId,
-        platform: target.socialAccount.platform,
-      });
+      result = await this.handler.publish(
+        {
+          organizationId: job.organizationId,
+          targetId: job.targetId,
+          attemptNo: job.attemptNo,
+          postId: target.postId,
+          socialAccountId: target.socialAccountId,
+          platform: target.socialAccount.platform,
+        },
+        hooks,
+      );
     } catch (error) {
       // We cannot know whether the platform received it: reconcile before any new attempt (CLAUDE.md).
       log.error({ err: error }, 'publish handler threw; outcome unknown');
-      outcome = 'unknown_outcome';
-      errorClass = 'unknown';
+      result = { state: 'unknown_outcome', errorClass: 'unknown' };
     }
+    const outcome: PublicationState = result.state;
 
     const stored = await this.db.withTenant(job.organizationId, async (tx) => {
       // The attempt keeps what the adapter reported, even if the lease expired meanwhile.
       await tx.publishAttempt.updateMany({
-        where: { targetId: job.targetId, attemptNo: job.attemptNo },
-        data: { finishedAt: new Date(), outcome, errorClass },
+        where: attemptWhere,
+        data: {
+          finishedAt: new Date(),
+          outcome,
+          errorClass: result.errorClass ?? null,
+          response: { ...progress, ...result.response },
+        },
       });
       const { count } = await tx.publicationTarget.updateMany({
         where: { id: job.targetId, state: 'publishing', attemptCount: job.attemptNo },

@@ -78,6 +78,8 @@ model Post {
   organizationId String   @map("organization_id") @db.Uuid
   workspaceId    String   @map("workspace_id") @db.Uuid
   body           String
+  /// Phase 0 only (ADR 007): public HTTPS URL of a JPEG to publish. Replaced by the media library.
+  imageUrl       String?  @map("image_url")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 

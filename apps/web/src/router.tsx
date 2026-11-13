@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
 import { useSession } from './lib/session';
+import { AccountsPage, CONNECT_RESULTS, type ConnectResult } from './pages/accounts-page';
 import { LoginPage } from './pages/login-page';
 import { PostsPage } from './pages/posts-page';
 
@@ -42,7 +43,29 @@ const postsRoute = createRoute({
   component: PostsPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, postsRoute]);
+const requireOrganization = () => {
+  if (!useSession.getState().organizationId) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirects are thrown
+    throw redirect({ to: '/login' });
+  }
+};
+
+const accountsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts',
+  // ?instagram=<result> is set by the API after Meta's login dialog.
+  validateSearch: (search: Record<string, unknown>): { instagram?: ConnectResult } =>
+    (CONNECT_RESULTS as readonly unknown[]).includes(search.instagram)
+      ? { instagram: search.instagram as ConnectResult }
+      : {},
+  beforeLoad: requireOrganization,
+  component: function AccountsRoute() {
+    const { instagram } = accountsRoute.useSearch();
+    return <AccountsPage result={instagram} />;
+  },
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, postsRoute, accountsRoute]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({

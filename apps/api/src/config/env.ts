@@ -1,4 +1,24 @@
+import { Secret } from '@app/vault';
 import { z } from 'zod';
+
+/** Secrets are wrapped right at parsing time: printing the env (logs, errors) shows [REDACTED]. */
+const secret = (min = 1) =>
+  z
+    .string()
+    .min(min)
+    .transform((value) => new Secret(value));
+
+/** Instagram connection (ADR 007). All or nothing: the integration is off until every value is set. */
+const INSTAGRAM_KEYS = [
+  'META_APP_ID',
+  'META_APP_SECRET',
+  'INSTAGRAM_CONFIG_ID',
+  'INSTAGRAM_REDIRECT_URI',
+  'OAUTH_STATE_SECRET',
+  'VAULT_MASTER_KEY_ID',
+  'VAULT_MASTER_PUBLIC_KEY',
+  'WEB_APP_URL',
+] as const;
 
 export const envSchema = z
   .object({
@@ -16,8 +36,37 @@ export const envSchema = z
      * Refused in production.
      */
     DEV_TENANT_HEADER: z.stringbool().default(false),
+
+    /** Meta app id (public). */
+    META_APP_ID: z.string().regex(/^\d+$/).optional(),
+    /** Meta app secret: server side only, never logged (rule 3). */
+    META_APP_SECRET: secret().optional(),
+    /** Configuration id from "API setup with Unified login" (public). */
+    INSTAGRAM_CONFIG_ID: z.string().regex(/^\d+$/).optional(),
+    /** Must be HTTPS and registered in the Meta App Dashboard (documented requirement). */
+    INSTAGRAM_REDIRECT_URI: z.url({ protocol: /^https$/ }).optional(),
+    /** HMAC key signing the OAuth state (32+ characters). */
+    OAUTH_STATE_SECRET: secret(32).optional(),
+    /** Vault master PUBLIC key (ADR 006): the API can seal tokens, never read them. */
+    VAULT_MASTER_KEY_ID: z
+      .string()
+      .regex(/^[\w-]{1,64}$/)
+      .optional(),
+    VAULT_MASTER_PUBLIC_KEY: z.string().optional(),
+    /** Where the browser goes back after connecting an account. */
+    WEB_APP_URL: z.url({ protocol: /^https?$/ }).optional(),
   })
   .superRefine((env, ctx) => {
+    const set = INSTAGRAM_KEYS.filter((key) => env[key] !== undefined);
+    if (set.length > 0 && set.length < INSTAGRAM_KEYS.length) {
+      for (const key of INSTAGRAM_KEYS.filter((k) => env[k] === undefined)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'required once any Instagram integration variable is set',
+        });
+      }
+    }
     if (env.NODE_ENV === 'production' && env.DEV_TENANT_HEADER) {
       ctx.addIssue({
         code: 'custom',

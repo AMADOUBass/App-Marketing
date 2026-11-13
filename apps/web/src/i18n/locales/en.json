@@ -28,5 +28,29 @@
     "loadMore": "Load more",
     "loadingMore": "Loading…",
     "updatedAt": "Updated {{date}}"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "posts": "Posts",
+    "accounts": "Connected accounts"
+  },
+  "accounts": {
+    "title": "Connected accounts",
+    "loading": "Loading accounts…",
+    "empty": "No connected account yet.",
+    "error": "Could not load accounts.",
+    "connected": "Connected",
+    "notConnected": "Needs reconnecting",
+    "connectInstagram": "Connect Instagram",
+    "redirecting": "Redirecting to Meta…",
+    "notConfigured": "Instagram connection is not configured on this server yet.",
+    "connectError": "Could not start the Instagram connection.",
+    "result": {
+      "connected": "Your Instagram account is connected.",
+      "cancelled": "Connection cancelled: no account was added.",
+      "invalid_state": "The connection expired or is not valid. Please start again.",
+      "no_account": "No Instagram professional account was shared with the app.",
+      "failed": "The Instagram connection failed. Please try again."
+    }
   }
 }

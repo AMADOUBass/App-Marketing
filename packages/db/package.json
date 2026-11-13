@@ -21,7 +21,8 @@
     "test": "vitest run",
     "migrate": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
-    "seed": "node --env-file-if-exists=.env dist/seed.js"
+    "seed": "node --env-file-if-exists=.env dist/seed.js",
+    "test-post": "node --env-file-if-exists=.env dist/dev-test-post.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

@@ -7,16 +7,20 @@ import {
   type Provider,
 } from '@nestjs/common';
 import { createDb, type Db } from '@app/db';
+import { createInstagramAdapter, type FetchLike } from '@app/integrations';
+import { createVaultOpener, parseMasterPrivateKeys } from '@app/vault/open';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { type DestinationStream, type Logger, pino } from 'pino';
 import { PUBLISH_QUEUE, type PublishJobData } from './common/queues.js';
 import { DB, LOGGER, PUBLISH_QUEUE_CLIENT, VALKEY } from './common/tokens.js';
 import { ENV, type Env } from './config/env.js';
+import { InstagramPublishHandler } from './publish/instagram-publish.handler.js';
 import {
   NoAdapterPublishHandler,
   PUBLISH_HANDLER,
   type PublishHandler,
+  RoutingPublishHandler,
 } from './publish/publish-handler.js';
 import { PublishProcessor } from './publish/publish.processor.js';
 import { LeaderLock } from './scheduler/leader-lock.js';
@@ -27,6 +31,20 @@ export interface WorkerModuleOptions {
   publishHandler?: PublishHandler;
   /** Overrides the log destination (tests). */
   logStream?: DestinationStream;
+  /** Replaces the network for Meta Graph API calls (tests use a fake Graph API). */
+  graphFetch?: FetchLike;
+}
+
+/** Real platform handlers behind feature flags; anything else asks a human (needs_action). */
+function createPublishHandler(env: Env, db: Db, graphFetch?: FetchLike): PublishHandler {
+  if (!env.INSTAGRAM_PUBLISHING_ENABLED || !env.VAULT_MASTER_PRIVATE_KEYS) {
+    return new NoAdapterPublishHandler();
+  }
+  const opener = createVaultOpener({
+    masterPrivateKeys: parseMasterPrivateKeys(env.VAULT_MASTER_PRIVATE_KEYS.reveal()),
+  });
+  const adapter = createInstagramAdapter(graphFetch ? { fetch: graphFetch } : {});
+  return new RoutingPublishHandler({ instagram: new InstagramPublishHandler(db, opener, adapter) });
 }
 
 @Injectable()
@@ -103,7 +121,9 @@ export class WorkerModule {
       providers.push(
         {
           provide: PUBLISH_HANDLER,
-          useValue: options.publishHandler ?? new NoAdapterPublishHandler(),
+          inject: [DB],
+          useFactory: (db: Db) =>
+            options.publishHandler ?? createPublishHandler(env, db, options.graphFetch),
         },
         PublishProcessor,
       );

@@ -6,6 +6,7 @@ import { PUBLISH_QUEUE, type PublishJobData } from '../src/common/queues.js';
 import type {
   PublishHandler,
   PublishOutcomeState,
+  PublishResult,
   PublishTarget,
 } from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
@@ -22,10 +23,10 @@ class SlowHandler implements PublishHandler {
     private readonly delayMs = 300,
     private readonly outcome: PublishOutcomeState = 'published',
   ) {}
-  async publish(target: PublishTarget): Promise<PublishOutcomeState> {
+  async publish(target: PublishTarget): Promise<PublishResult> {
     this.calls.push(target);
     await new Promise((resolve) => setTimeout(resolve, this.delayMs));
-    return this.outcome;
+    return { state: this.outcome };
   }
 }
 
@@ -138,8 +139,10 @@ describe('a publication never disappears (rule 6)', () => {
     let release: (outcome: PublishOutcomeState) => void = () => undefined;
     const blocked: PublishHandler = {
       publish: () =>
-        new Promise<PublishOutcomeState>((resolve) => {
-          release = resolve;
+        new Promise<PublishResult>((resolve) => {
+          release = (state) => {
+            resolve({ state });
+          };
         }),
     };
     const processor = (await start(createTestEnv('publish'), blocked)).get(PublishProcessor);

@@ -236,6 +236,8 @@ pnpm format         # Prettier --write
 pnpm dev            # web (http://localhost:5173) + api (:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env
 pnpm db:seed        # organisations de démonstration (ids fixes, affichés) pour se connecter sur le web
 pnpm vault:keygen   # nouvelle paire de clés maître du coffre à jetons : publique → api, privée → worker SEULEMENT (ADR 006)
+pnpm tunnel         # adresse HTTPS publique de dev (Cloudflare, Docker) vers le web :5173 — change à chaque lancement (ADR 007)
+pnpm dev:test-post -- --org <id> --image <https jpeg>  # programme un post de test sur le compte Instagram connecté
 pnpm db:migrate     # applique les migrations (schéma + RLS) — copier packages/db/.env.example → .env
 pnpm db:migrate:dev # crée une migration depuis schema.prisma (RLS : migration --create-only éditée à la main)
 pnpm db:generate    # régénère le client Prisma (packages/db/src/generated, non versionné)
@@ -275,7 +277,8 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
   - [x] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités (valeurs sourcées et datées), adaptateur Instagram
     en **Unified Login** (ADR 007) : connexion, conteneur → statut → publication, réconciliation, classement des erreurs ;
     fixtures issues de la doc, à remplacer par des réponses enregistrées en 9c
-  - [ ] 9c essai réel sur le compte Instagram de test (compte développeur Meta requis)
+  - [ ] 9c essai réel sur le compte Instagram de test : code prêt (connexion OAuth, publication derrière
+    `INSTAGRAM_PUBLISHING_ENABLED`, page « Comptes connectés », tunnel) — reste l'essai avec le compte Meta
 - [x] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
   (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
   routes déclarées en code (pas de fichier généré) ; E2E Playwright + axe WCAG 2.2 AA en CI)

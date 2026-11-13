@@ -7,9 +7,10 @@ import { type Env, parseEnv, type ProcessRole } from '../src/config/env.js';
 import type {
   PublishHandler,
   PublishOutcomeState,
+  PublishResult,
   PublishTarget,
 } from '../src/publish/publish-handler.js';
-import { WorkerModule } from '../src/worker.module.js';
+import { WorkerModule, type WorkerModuleOptions } from '../src/worker.module.js';
 
 /** Fast ticks and a unique namespace per call, so tests do not share queues or locks. */
 export function createTestEnv(role: ProcessRole, overrides: Record<string, string> = {}): Env {
@@ -29,9 +30,10 @@ export function createTestEnv(role: ProcessRole, overrides: Record<string, strin
 export async function startWorker(
   env: Env,
   publishHandler?: PublishHandler,
+  options: Omit<WorkerModuleOptions, 'publishHandler'> = {},
 ): Promise<INestApplicationContext> {
   const app = await NestFactory.createApplicationContext(
-    WorkerModule.register(env, publishHandler ? { publishHandler } : {}),
+    WorkerModule.register(env, { ...options, ...(publishHandler ? { publishHandler } : {}) }),
     { logger: false },
   );
   await app.init();
@@ -44,9 +46,9 @@ export class RecordingHandler implements PublishHandler {
 
   constructor(private readonly outcome: PublishOutcomeState = 'published') {}
 
-  publish(target: PublishTarget): Promise<PublishOutcomeState> {
+  publish(target: PublishTarget): Promise<PublishResult> {
     this.calls.push({ target, at: Date.now() });
-    return Promise.resolve(this.outcome);
+    return Promise.resolve({ state: this.outcome });
   }
 }
 

@@ -19,7 +19,7 @@ let b: Fixture;
 
 class SwitchableHandler implements PublishHandler {
   current: PublishHandler = new RecordingHandler();
-  publish: PublishHandler['publish'] = (target) => this.current.publish(target);
+  publish: PublishHandler['publish'] = (target, hooks) => this.current.publish(target, hooks);
 }
 const switchable = new SwitchableHandler();
 
