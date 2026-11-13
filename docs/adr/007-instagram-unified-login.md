@@ -62,3 +62,18 @@ documentation officielle (vérifiée le 2026-11-13) indique :
 - **Tunnel de dev** : `pnpm tunnel` lance `cloudflare/cloudflared:2026.10.7` dans Docker (tunnel rapide, sans
   compte) vers le serveur Vite, qui relaie `/api`. L'adresse change à chaque lancement : la remettre dans Meta
   (URL de redirection) et dans `apps/api/.env`. Vite n'accepte que `*.trycloudflare.com` comme hôte externe.
+
+## Essai réel (2026-11-14)
+
+Publication d'une image sur le compte de test **abassoum88888** via le scheduler et le worker : cible `published`,
+1 tentative, 11,8 s, id de conteneur et id du média Instagram enregistrés, aucun jeton dans la trace.
+Confirmé sur le compte réel :
+
+- la boîte de connexion accepte `client_id`, `config_id`, `redirect_uri`, `response_type=code`,
+  `override_default_response_type=true`, `state` et `prompt=login` ;
+- l'échange du code **exige `redirect_uri`**, identique à celui de la boîte (sinon OAuthException 100 / 36008) :
+  la page Unified Login l'omet, la référence « manual flow » de Facebook Login l'impose ;
+- `/me/assigned_instagram_accounts` renvoie au moins `id` et `username` ;
+- `instagram_manage_messages` reste demandée par la configuration (non retirable) ; notre code ne l'utilise pas.
+
+Reste à faire : enregistrer de vraies réponses pour remplacer les fixtures issues de la doc.

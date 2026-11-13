@@ -251,7 +251,7 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 
 ## 11. État actuel et prochaines tâches
 
-**Phase actuelle : Phase 0 — spike technique (en local, gratuit).** Objectif : prouver le socle avant le MVP.
+**Phase 0 — spike technique : terminée le 2026-11-14.** Socle prouvé, jusqu'à une vraie publication Instagram. Prochaine étape : le MVP (ci-dessous).
 
 - [x] 0.1 Monorepo pnpm + Turborepo, `packages/config` (tsconfig strict, lint, prettier), CI GitHub Actions (typecheck, lint, test)
 - [x] 0.2 `infra/compose/docker-compose.dev.yml` : PostgreSQL 18, Valkey 8.1, RustFS (imite R2 ; MinIO n'a plus d'image — ADR 001).
@@ -271,14 +271,14 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 - [x] 0.8 Idempotence : deux workers ne peuvent pas exécuter la même cible (test)
   (transition conditionnelle + `publish_attempts` unique `(target_id, attempt_no)` dans la même transaction ;
   bail `PUBLISH_LEASE_SECONDS` : cible bloquée en publication → `unknown_outcome`, jamais republiée à l'aveugle — ADR 005)
-- [ ] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
+- [x] 0.9 `packages/integrations/instagram` : OAuth (Instagram Login), création de conteneur, publication d'une image sur un **compte de test**
   - [x] 9a coffre à jetons `packages/vault` : tables `organization_keys` / `oauth_credentials` ; X25519 + AES-256-GCM ;
     l'API scelle (`@app/vault/seal`), seul le worker ouvre (`@app/vault/open`, interdit dans l'api par ESLint) ; type `Secret` (ADR 006)
   - [x] 9b `packages/integrations` : `PlatformAdapter`, registre de capacités (valeurs sourcées et datées), adaptateur Instagram
     en **Unified Login** (ADR 007) : connexion, conteneur → statut → publication, réconciliation, classement des erreurs ;
     fixtures issues de la doc, à remplacer par des réponses enregistrées en 9c
-  - [ ] 9c essai réel sur le compte Instagram de test : code prêt (connexion OAuth, publication derrière
-    `INSTAGRAM_PUBLISHING_ENABLED`, page « Comptes connectés », tunnel) — reste l'essai avec le compte Meta
+  - [x] 9c essai réel réussi le 2026-11-14 : image publiée sur le compte de test via scheduler + worker (`published`, 1 tentative) ;
+    connexion OAuth, page « Comptes connectés », `INSTAGRAM_PUBLISHING_ENABLED`, tunnel ; `redirect_uri` requis à l'échange du code (ADR 007)
 - [x] 0.10 `apps/web` : React + Vite + TanStack Router + Tailwind + shadcn, page de connexion et liste de posts (lecture via API)
   (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
   routes déclarées en code (pas de fichier généré) ; E2E Playwright + axe WCAG 2.2 AA en CI)
