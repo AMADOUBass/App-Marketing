@@ -10,7 +10,9 @@ import { ENV, type Env } from './config/env.js';
 import { createLoggerParams } from './config/logger.js';
 import { ContentModule } from './modules/content/content.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { IdentityModule } from './modules/identity/identity.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
+import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 
 export interface AppModuleOptions {
   /** Overrides the log destination (tests capture logs this way). */
@@ -28,6 +30,8 @@ export class AppModule {
       imports: [
         LoggerModule.forRoot(createLoggerParams(env, options.logStream)),
         DbModule,
+        IdentityModule,
+        TenancyModule,
         HealthModule,
         ContentModule,
         IntegrationsModule.register(options.graphFetch),

@@ -11,6 +11,10 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./identity": {
+      "types": "./dist/identity.d.ts",
+      "default": "./dist/identity.js"
     }
   },
   "scripts": {

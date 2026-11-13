@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { InvalidEnvError, parseEnv } from '../src/config/env.js';
 
 const DATABASE_URL = 'postgresql://app_user:secret@127.0.0.1:5432/app';
+/** Required authentication settings (ADR 008). */
+const AUTH = {
+  BETTER_AUTH_SECRET: 'x'.repeat(32),
+  BETTER_AUTH_URL: 'http://localhost:5173',
+  AUTH_DATABASE_URL: 'postgresql://app_auth:secret@127.0.0.1:5432/app',
+};
 
 describe('parseEnv', () => {
   it('applies safe defaults', () => {
-    expect(parseEnv({ DATABASE_URL })).toEqual({
+    const env = parseEnv({ DATABASE_URL, ...AUTH });
+    expect(env).toMatchObject({
       NODE_ENV: 'development',
       HOST: '127.0.0.1',
       PORT: 3000,
@@ -13,11 +20,26 @@ describe('parseEnv', () => {
       LOG_PRETTY: false,
       DATABASE_URL,
       DEV_TENANT_HEADER: false,
+      BETTER_AUTH_URL: 'http://localhost:5173',
+      TRUSTED_ORIGINS: [],
     });
+    // The secret is wrapped: it never prints.
+    expect(String(env.BETTER_AUTH_SECRET)).not.toContain('xxxx');
+  });
+
+  it('requires the authentication settings', () => {
+    expect(() => parseEnv({ DATABASE_URL })).toThrow(/BETTER_AUTH_SECRET/);
+    expect(() => parseEnv({ DATABASE_URL, ...AUTH, BETTER_AUTH_SECRET: 'too-short' })).toThrow(
+      /BETTER_AUTH_SECRET/,
+    );
+    expect(
+      parseEnv({ DATABASE_URL, ...AUTH, TRUSTED_ORIGINS: 'http://a.test, http://b.test' })
+        .TRUSTED_ORIGINS,
+    ).toEqual(['http://a.test', 'http://b.test']);
   });
 
   it('coerces string values', () => {
-    expect(parseEnv({ DATABASE_URL, PORT: '8080', LOG_PRETTY: 'true' })).toMatchObject({
+    expect(parseEnv({ DATABASE_URL, ...AUTH, PORT: '8080', LOG_PRETTY: 'true' })).toMatchObject({
       PORT: 8080,
       LOG_PRETTY: true,
     });
@@ -47,8 +69,10 @@ describe('parseEnv', () => {
 
   it('refuses the dev tenant header in production', () => {
     expect(() =>
-      parseEnv({ DATABASE_URL, NODE_ENV: 'production', DEV_TENANT_HEADER: 'true' }),
+      parseEnv({ DATABASE_URL, ...AUTH, NODE_ENV: 'production', DEV_TENANT_HEADER: 'true' }),
     ).toThrow(/DEV_TENANT_HEADER/);
-    expect(parseEnv({ DATABASE_URL, NODE_ENV: 'production' }).DEV_TENANT_HEADER).toBe(false);
+    expect(parseEnv({ DATABASE_URL, ...AUTH, NODE_ENV: 'production' }).DEV_TENANT_HEADER).toBe(
+      false,
+    );
   });
 });

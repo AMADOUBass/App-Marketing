@@ -2,6 +2,7 @@ import { randomUUIDv7 } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { createDb, type Db, InvalidOrganizationIdError } from '../src/index.js';
+import { createTestUser } from './users.js';
 
 interface TenantFixture {
   orgId: string;
@@ -16,12 +17,13 @@ let b: TenantFixture;
 
 async function seedTenant(name: string): Promise<TenantFixture> {
   const org = await db.createOrganization({ name });
+  const userId = await createTestUser();
   return db.withTenant(org.id, async (tx) => {
     const workspace = await tx.workspace.create({
       data: { organizationId: org.id, name: `${name} workspace` },
     });
     const membership = await tx.membership.create({
-      data: { organizationId: org.id, userId: randomUUIDv7(), role: 'owner' },
+      data: { organizationId: org.id, userId, role: 'owner' },
     });
     const post = await tx.post.create({
       data: { organizationId: org.id, workspaceId: workspace.id, body: `${name} post` },

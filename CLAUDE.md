@@ -48,7 +48,7 @@ Hors périmètre (ne pas coder) : gestion publicitaire, écoute sociale, CRM, é
 | Validation | Zod 4 (schémas partagés front/back) → OpenAPI 3.1 généré |
 | Base de données | PostgreSQL 18 (`uuidv7()`), Prisma 7 (`prisma-client`, adaptateur `@prisma/adapter-pg`) |
 | Files / cache / limites | Valkey 8.1 + BullMQ |
-| Auth | Better Auth 1.6 (organisations, 2FA, passkeys) — sessions en cookie httpOnly |
+| Auth | Better Auth 1.7 pour l'identité seulement (2FA, passkeys) ; nos tables organisations/adhésions restent la source de vérité — sessions en cookie httpOnly (ADR 008) |
 | Frontend | React 19 + Vite 8 + TanStack Router + TanStack Query + Zustand, en SPA |
 | UI | Tailwind CSS 4 + shadcn/ui + dnd-kit |
 | Médias | Cloudflare R2 (S3 compatible), upload direct par URL signée ; FFmpeg 8 dans worker-media |
@@ -119,7 +119,8 @@ erreurs : retrying | failed | needs_action | unknown_outcome → reconciled | ca
   passe la cible en `queued`, met le job en file avec le délai exact.
 - Cette requête inter-organisations passe **uniquement** par les fonctions `SECURITY DEFINER`
   `claim_due_publication_targets()` / `requeue_stale_publication_targets()` / `expire_stuck_publications()` (rôle NOLOGIN `app_scheduler`,
-  identifiants seulement) ; le job repasse par `withTenant`. Toute autre exception au RLS fait échouer la CI (ADR 005).
+  identifiants seulement) ; le job repasse par `withTenant`. Seule autre exception : `list_user_organizations()` (rôle NOLOGIN `app_directory`, ADR 008).
+  Toute autre exception au RLS fait échouer la CI (ADR 005).
 - Contrôle 15 min avant l'heure : jeton, permissions, quota restant, conformité du média.
 
 ### Événements
@@ -283,7 +284,14 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
   (connexion de dev = choix d'organisation, ADR 003 ; FR/EN i18next ; composants dans `packages/ui` ;
   routes déclarées en code (pas de fichier généré) ; E2E Playwright + axe WCAG 2.2 AA en CI)
 
-**Après la phase 0 (ordre du MVP)** : auth et multi-tenancy complets (Better Auth ; remplace la résolution provisoire de `TenantGuard`, ADR 003) → moteur de publication + adaptateurs Meta →
+**MVP en cours — auth et multi-tenancy complets (Better Auth, ADR 008)** :
+
+- [x] 1. Serveur : schéma `auth` (rôle `app_auth` seul), `/api/auth/*`, `GET /api/v1/me`, `POST /api/v1/organizations`,
+  `TenantGuard` session → `x-organization-id` → adhésion (401 / 400 / 403) ; jeton jamais dans le JSON
+- [ ] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; retrait de `x-dev-organization-id` (fin de l'ADR 003)
+- [ ] 3. 2FA TOTP, passkeys, vérification d'e-mail et réinitialisation (Mailpit en dev)
+
+**Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.
 
 **En parallèle, hors code** : nom du produit, entreprise enregistrée, domaine, politique de confidentialité,

@@ -1,5 +1,5 @@
 export { createDb, DatabaseUnavailableError, InvalidOrganizationIdError } from './tenant.js';
-export type { Db, DbOptions, DispatchItem, TenantTx } from './tenant.js';
+export type { Db, DbOptions, DispatchItem, TenantTx, UserOrganization } from './tenant.js';
 export type {
   Membership,
   Organization,

@@ -10,6 +10,9 @@ export function createTestEnv(overrides: Record<string, string> = {}): Env {
     LOG_LEVEL: 'info',
     DATABASE_URL: inject('databaseUrl'),
     DEV_TENANT_HEADER: 'true',
+    BETTER_AUTH_SECRET: 'test-better-auth-secret-0123456789abcdef',
+    BETTER_AUTH_URL: 'http://localhost:5173',
+    AUTH_DATABASE_URL: inject('authDatabaseUrl'),
     ...overrides,
   });
 }

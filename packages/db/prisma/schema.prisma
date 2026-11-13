@@ -13,6 +13,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Identity tables (Better Auth) live in their own schema, reachable only by the app_auth role (ADR 008).
+  schemas  = ["public", "auth"]
 }
 
 enum OrganizationRole {
@@ -21,6 +23,7 @@ enum OrganizationRole {
   member
 
   @@map("organization_role")
+  @@schema("public")
 }
 
 model Organization {
@@ -39,6 +42,7 @@ model Organization {
   oauthCredentials   OauthCredential[]
 
   @@map("organizations")
+  @@schema("public")
 }
 
 model Workspace {
@@ -56,9 +60,10 @@ model Workspace {
 
   @@unique([organizationId, id])
   @@map("workspaces")
+  @@schema("public")
 }
 
-/// Organization membership. user_id has no foreign key yet: the users table comes with Better Auth.
+/// Organization membership: the link between an identity (auth.users) and a tenant.
 model Membership {
   id             String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
   organizationId String           @map("organization_id") @db.Uuid
@@ -67,10 +72,13 @@ model Membership {
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, id])
   @@unique([organizationId, userId])
+  @@index([userId])
   @@map("memberships")
+  @@schema("public")
 }
 
 model Post {
@@ -91,6 +99,7 @@ model Post {
   @@unique([organizationId, id])
   @@index([organizationId, workspaceId])
   @@map("posts")
+  @@schema("public")
 }
 
 enum Platform {
@@ -102,6 +111,7 @@ enum Platform {
   tiktok
 
   @@map("platform")
+  @@schema("public")
 }
 
 /// A connected social account (page, profile, channel). OAuth tokens live elsewhere, encrypted (0.9).
@@ -124,6 +134,7 @@ model SocialAccount {
   @@unique([organizationId, id])
   @@unique([organizationId, platform, externalAccountId])
   @@map("social_accounts")
+  @@schema("public")
 }
 
 /// Per-organization X25519 key pair (ADR 006). The public key seals OAuth tokens (API side); the
@@ -144,6 +155,7 @@ model OrganizationKey {
 
   @@unique([organizationId, id])
   @@map("organization_keys")
+  @@schema("public")
 }
 
 /// OAuth tokens of a social account, sealed with the organization public key (never stored in clear).
@@ -167,6 +179,7 @@ model OauthCredential {
   @@unique([organizationId, id])
   @@unique([organizationId, socialAccountId])
   @@map("oauth_credentials")
+  @@schema("public")
 }
 
 /// Lifecycle of one post on one social account (CLAUDE.md section 5).
@@ -187,6 +200,7 @@ enum PublicationState {
   cancelled
 
   @@map("publication_state")
+  @@schema("public")
 }
 
 /// Unit of execution: one post x one social account.
@@ -215,6 +229,7 @@ model PublicationTarget {
   /// A post can target a social account only once (no double publication).
   @@unique([postId, socialAccountId])
   @@map("publication_targets")
+  @@schema("public")
 }
 
 /// Error classes (CLAUDE.md section 5). Only transient and quota are retried.
@@ -226,6 +241,7 @@ enum ErrorClass {
   unknown
 
   @@map("error_class")
+  @@schema("public")
 }
 
 /// One row per execution attempt of a target. Written in the same transaction as queued -> publishing:
@@ -250,4 +266,83 @@ model PublishAttempt {
   @@unique([organizationId, id])
   @@unique([targetId, attemptNo])
   @@map("publish_attempts")
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Identity (Better Auth 1.7, core schema). Schema "auth": no organization_id (a user belongs to several
+// organizations), reachable ONLY by the app_auth role used by Better Auth in the API (ADR 008).
+// Prisma field names must match Better Auth's field names (camelCase); columns stay snake_case.
+// ---------------------------------------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
+  image         String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships Membership[]
+
+  @@map("users")
+  @@schema("auth")
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  /// Opaque session token (Better Auth stores it; the cookie carries a signed copy).
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+  @@schema("auth")
+}
+
+/// One way to sign in (password, later social providers). `password` holds a hash, never a clear value.
+model Account {
+  id                    String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id") @db.Uuid
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(6)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+  @@schema("auth")
+}
+
+/// Short-lived verification values (email verification, password reset).
+model Verification {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([identifier])
+  @@map("verifications")
+  @@schema("auth")
 }

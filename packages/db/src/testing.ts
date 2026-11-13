@@ -10,14 +10,16 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 const POSTGRES_IMAGE = 'postgres:18.6-alpine3.24';
 const PACKAGE_ROOT = resolve(import.meta.dirname, '..');
 const INIT_DIR = resolve(PACKAGE_ROOT, '../../infra/compose/postgres/init');
-const INIT_SCRIPTS = ['01-roles.sh', '02-scheduler-role.sh'];
-const PASSWORDS = { migrator: 'migrator_test', appUser: 'app_user_test' };
+const INIT_SCRIPTS = ['01-roles.sh', '02-scheduler-role.sh', '03-identity-roles.sh'];
+const PASSWORDS = { migrator: 'migrator_test', appUser: 'app_user_test', auth: 'app_auth_test' };
 
 export interface TestDatabase {
   /** app_user: runtime role, subject to RLS. */
   appUserUrl: string;
   /** app_migrator: schema owner. */
   migratorUrl: string;
+  /** app_auth: Better Auth, schema "auth" only (ADR 008). */
+  authUrl: string;
   stop(): Promise<void>;
 }
 
@@ -27,6 +29,7 @@ export async function startTestDatabase(): Promise<TestDatabase> {
       APP_DB_NAME: 'app',
       APP_MIGRATOR_PASSWORD: PASSWORDS.migrator,
       APP_USER_PASSWORD: PASSWORDS.appUser,
+      APP_AUTH_PASSWORD: PASSWORDS.auth,
     })
     .withCopyFilesToContainer(
       INIT_SCRIPTS.map((name) => ({
@@ -40,6 +43,7 @@ export async function startTestDatabase(): Promise<TestDatabase> {
   const address = `${container.getHost()}:${String(container.getPort())}`;
   const migratorUrl = `postgresql://app_migrator:${PASSWORDS.migrator}@${address}/app`;
   const appUserUrl = `postgresql://app_user:${PASSWORDS.appUser}@${address}/app`;
+  const authUrl = `postgresql://app_auth:${PASSWORDS.auth}@${address}/app`;
 
   // Apply the real migrations (schema + RLS) exactly as in production.
   const prismaCli = join(
@@ -55,6 +59,7 @@ export async function startTestDatabase(): Promise<TestDatabase> {
   return {
     appUserUrl,
     migratorUrl,
+    authUrl,
     stop: async () => {
       await container.stop();
     },

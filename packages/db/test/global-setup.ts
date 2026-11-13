@@ -7,6 +7,8 @@ declare module 'vitest' {
     appUserUrl: string;
     /** app_migrator: schema owner (used only to inspect the catalog). */
     migratorUrl: string;
+    /** app_auth: Better Auth role, schema "auth" only. */
+    authUrl: string;
   }
 }
 
@@ -16,6 +18,7 @@ export async function setup(project: TestProject): Promise<void> {
   database = await startTestDatabase();
   project.provide('appUserUrl', database.appUserUrl);
   project.provide('migratorUrl', database.migratorUrl);
+  project.provide('authUrl', database.authUrl);
 }
 
 export async function teardown(): Promise<void> {

@@ -70,8 +70,10 @@ describe('row-level security coverage', () => {
     }
   });
 
-  it('cross-organization policies are limited to the reviewed scheduler exceptions (ADR 005)', async () => {
+  it('cross-organization policies are limited to the reviewed exceptions (ADR 005, ADR 008)', async () => {
     const allowed: Record<string, string[]> = {
+      memberships: ['directory_read', 'tenant_isolation'],
+      organizations: ['directory_read', 'tenant_isolation'],
       publication_targets: [
         'scheduler_expire',
         'scheduler_queue',
@@ -86,7 +88,7 @@ describe('row-level security coverage', () => {
     }
   });
 
-  it('SECURITY DEFINER functions are limited to the reviewed scheduler functions (ADR 005)', async () => {
+  it('SECURITY DEFINER functions are limited to the reviewed ones (ADR 005, ADR 008)', async () => {
     const { rows } = await client.query<{ name: string; owner: string }>(`
       SELECT p.proname AS name, pg_get_userbyid(p.proowner) AS owner
       FROM pg_proc p
@@ -96,7 +98,26 @@ describe('row-level security coverage', () => {
     expect(rows).toEqual([
       { name: 'claim_due_publication_targets', owner: 'app_scheduler' },
       { name: 'expire_stuck_publications', owner: 'app_scheduler' },
+      { name: 'list_user_organizations', owner: 'app_directory' },
       { name: 'requeue_stale_publication_targets', owner: 'app_scheduler' },
+    ]);
+  });
+
+  it('no role other than app_auth (and the owner) can touch identity tables (ADR 008)', async () => {
+    const { rows } = await client.query<{ grantee: string }>(`
+      SELECT DISTINCT grantee FROM information_schema.role_table_grants
+      WHERE table_schema = 'auth' AND grantee NOT IN ('app_migrator')
+      ORDER BY grantee`);
+    expect(rows.map((r) => r.grantee)).toEqual(['app_auth']);
+
+    const { rows: schemaAccess } = await client.query<{ role: string; usage: boolean }>(`
+      SELECT r AS role, has_schema_privilege(r, 'auth', 'USAGE') AS usage
+      FROM unnest(ARRAY['app_user', 'app_scheduler', 'app_directory', 'app_auth']) AS r ORDER BY r`);
+    expect(schemaAccess).toEqual([
+      { role: 'app_auth', usage: true },
+      { role: 'app_directory', usage: false },
+      { role: 'app_scheduler', usage: false },
+      { role: 'app_user', usage: false },
     ]);
   });
 

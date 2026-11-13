@@ -1,6 +1,11 @@
 import { randomUUIDv7 } from 'node:crypto';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { type Organization, type Prisma, PrismaClient } from './generated/prisma/client.js';
+import {
+  type Organization,
+  type OrganizationRole,
+  type Prisma,
+  PrismaClient,
+} from './generated/prisma/client.js';
 
 /** Prisma client bound to one organization, valid only inside a `withTenant` callback. */
 export type TenantTx = Prisma.TransactionClient;
@@ -30,6 +35,19 @@ export interface Db {
   withTenant<T>(organizationId: string, fn: (tx: TenantTx) => Promise<T>): Promise<T>;
   /** Creates an organization. Its id is generated here so RLS can scope the insert to it. */
   createOrganization(data: { name: string }): Promise<Organization>;
+  /** Onboarding: organization + owner membership + first workspace, in one transaction. */
+  createOrganizationWithOwner(data: {
+    name: string;
+    ownerUserId: string;
+    workspaceName: string;
+  }): Promise<Organization>;
+  /**
+   * The only cross-organization read of memberships (ADR 008): organizations `userId` belongs to.
+   * Pass the AUTHENTICATED user's id only.
+   */
+  directory: {
+    listOrganizations(userId: string): Promise<UserOrganization[]>;
+  };
   /** Readiness check: resolves if the database answers within `timeoutMs`. Touches no table. */
   ping(timeoutMs?: number): Promise<void>;
   /**
@@ -45,6 +63,12 @@ export interface Db {
     expireStuck(options: { leaseSeconds: number; limit: number }): Promise<DispatchItem[]>;
   };
   disconnect(): Promise<void>;
+}
+
+export interface UserOrganization {
+  organizationId: string;
+  name: string;
+  role: OrganizationRole;
 }
 
 /** What the scheduler may know about a target: identifiers and timing, never content. */
@@ -95,6 +119,31 @@ export function createDb(options: DbOptions): Db {
     createOrganization: ({ name }) => {
       const id = randomUUIDv7();
       return withTenant(id, (tx) => tx.organization.create({ data: { id, name } }));
+    },
+    createOrganizationWithOwner: ({ name, ownerUserId, workspaceName }) => {
+      if (!UUID.test(ownerUserId)) throw new InvalidOrganizationIdError();
+      const id = randomUUIDv7();
+      return withTenant(id, async (tx) => {
+        const organization = await tx.organization.create({ data: { id, name } });
+        await tx.membership.create({
+          data: { organizationId: id, userId: ownerUserId, role: 'owner' },
+        });
+        await tx.workspace.create({ data: { organizationId: id, name: workspaceName } });
+        return organization;
+      });
+    },
+    directory: {
+      listOrganizations: async (userId) => {
+        if (!UUID.test(userId)) return [];
+        const rows = await prisma.$queryRaw<
+          { organization_id: string; name: string; role: OrganizationRole }[]
+        >`SELECT organization_id, name, role FROM list_user_organizations(${userId}::uuid)`;
+        return rows.map((row) => ({
+          organizationId: row.organization_id,
+          name: row.name,
+          role: row.role,
+        }));
+      },
     },
     ping: async (timeoutMs = 2000) => {
       let timer: NodeJS.Timeout | undefined;

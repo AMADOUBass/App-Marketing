@@ -37,6 +37,23 @@ export const envSchema = z
      */
     DEV_TENANT_HEADER: z.stringbool().default(false),
 
+    /** Better Auth (ADR 008). Signs session cookies: 32+ random characters, never committed. */
+    BETTER_AUTH_SECRET: secret(32),
+    /** Public origin the browser uses (the web app, which proxies /api in development). */
+    BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
+    /** Origins allowed to call the auth endpoints (comma-separated). Defaults to BETTER_AUTH_URL. */
+    TRUSTED_ORIGINS: z
+      .string()
+      .optional()
+      .transform((value) =>
+        (value ?? '')
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
+    /** Identity database role (app_auth): schema "auth" only. */
+    AUTH_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+
     /** Meta app id (public). */
     META_APP_ID: z.string().regex(/^\d+$/).optional(),
     /** Meta app secret: server side only, never logged (rule 3). */
