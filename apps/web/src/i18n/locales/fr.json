@@ -1,8 +1,7 @@
 {
   "app": {
     "name": "Ponctua",
-    "skipToContent": "Aller au contenu principal",
-    "devMode": "Mode développement"
+    "skipToContent": "Aller au contenu principal"
   },
   "language": {
     "label": "Langue",
@@ -11,16 +10,14 @@
   },
   "login": {
     "title": "Connexion",
-    "description": "Choisissez l'organisation à utiliser. La vraie connexion arrivera avec la gestion des comptes.",
-    "organizationLabel": "Identifiant de l'organisation",
-    "organizationHint": "Lancez « pnpm db:seed » pour créer des organisations de démonstration et afficher leurs identifiants.",
-    "invalidOrganization": "Saisissez un identifiant valide (format UUID).",
-    "submit": "Continuer"
+    "description": "Connectez-vous à votre espace Ponctua.",
+    "submit": "Se connecter",
+    "submitting": "Connexion…",
+    "noAccount": "Pas encore de compte ?",
+    "signUpLink": "Créer un compte"
   },
   "posts": {
     "title": "Publications",
-    "organization": "Organisation : {{id}}",
-    "signOut": "Changer d'organisation",
     "loading": "Chargement des publications…",
     "empty": "Aucune publication pour l'instant.",
     "error": "Impossible de charger les publications.",
@@ -52,5 +49,62 @@
       "no_account": "Aucun compte Instagram professionnel n'a été partagé avec l'application.",
       "failed": "La connexion à Instagram a échoué. Réessayez."
     }
+  },
+  "auth": {
+    "name": "Nom",
+    "email": "Adresse courriel",
+    "password": "Mot de passe",
+    "passwordHint": "Au moins {{count}} caractères. Une phrase de passe est plus facile à retenir.",
+    "errors": {
+      "nameRequired": "Saisissez votre nom.",
+      "emailInvalid": "Saisissez une adresse courriel valide, par exemple nom@agence.ca.",
+      "invalidEmail": "Saisissez une adresse courriel valide, par exemple nom@agence.ca.",
+      "passwordRequired": "Saisissez votre mot de passe.",
+      "passwordTooShort": "Le mot de passe doit contenir au moins {{count}} caractères.",
+      "invalidCredentials": "Adresse courriel ou mot de passe incorrect.",
+      "emailTaken": "Un compte existe déjà avec cette adresse. Connectez-vous plutôt.",
+      "tooManyAttempts": "Trop de tentatives. Patientez une minute, puis réessayez.",
+      "unknown": "Une erreur est survenue. Réessayez."
+    }
+  },
+  "signup": {
+    "title": "Créer un compte",
+    "description": "Créez votre compte, puis votre organisation pour inviter votre équipe.",
+    "submit": "Créer mon compte",
+    "submitting": "Création du compte…",
+    "haveAccount": "Déjà un compte ?",
+    "signInLink": "Se connecter"
+  },
+  "organizations": {
+    "title": "Choisir une organisation",
+    "description": "Vous êtes membre de plusieurs organisations. Choisissez celle où travailler.",
+    "open": "Ouvrir",
+    "openNamed": "Ouvrir {{name}}",
+    "create": "Créer une organisation",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "member": "Membre"
+    },
+    "new": {
+      "title": "Créer votre organisation",
+      "description": "Une organisation regroupe votre équipe et les clients que vous gérez. Vous en deviendrez propriétaire.",
+      "nameLabel": "Nom de l'organisation",
+      "nameHint": "Par exemple, le nom de votre agence.",
+      "nameInvalid": "Le nom doit contenir entre 2 et 120 caractères.",
+      "submit": "Créer l'organisation",
+      "submitting": "Création…",
+      "error": "Impossible de créer l'organisation. Réessayez.",
+      "back": "Retour à mes organisations"
+    }
+  },
+  "session": {
+    "organizationLabel": "Organisation",
+    "signOut": "Se déconnecter",
+    "signOutError": "La déconnexion a échoué. Réessayez."
+  },
+  "errors": {
+    "page": "Impossible de charger la page.",
+    "retry": "Réessayer"
   }
 }

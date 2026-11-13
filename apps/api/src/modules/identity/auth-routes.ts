@@ -1,6 +1,6 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyInstance } from 'fastify';
-import type { Auth } from './auth.js';
+import { type Auth, CLIENT_IP_HEADER } from './auth.js';
 
 /**
  * Better Auth also returns the session token in the JSON body of sign-in / sign-up (for bearer use).
@@ -31,10 +31,13 @@ export function registerAuthRoutes(fastify: FastifyInstance, auth: Auth): void {
     url: '/api/auth/*',
     handler: async (request, reply) => {
       const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
+      const headers = fromNodeHeaders(request.headers);
+      // Overwrites whatever the client sent: rate limits must not be dodged by a forged header.
+      headers.set(CLIENT_IP_HEADER, request.ip);
       const response = await auth.handler(
         new Request(url, {
           method: request.method,
-          headers: fromNodeHeaders(request.headers),
+          headers,
           ...(request.body ? { body: JSON.stringify(request.body) } : {}),
         }),
       );

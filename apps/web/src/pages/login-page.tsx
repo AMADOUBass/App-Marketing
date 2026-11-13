@@ -1,74 +1,99 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, Input, Label } from '@ponctua/ui';
-import { useNavigate } from '@tanstack/react-router';
-import { type SubmitEvent, useId, useState } from 'react';
+import { signInSchema } from '@ponctua/contracts';
+import { Button, Card, CardContent, CardDescription, CardHeader } from '@ponctua/ui';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { type SubmitEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { z } from 'zod';
-import { useSession } from '../lib/session';
+import { FormField, focusFirstInvalid } from '../components/form-field';
+import { AuthError, authApi } from '../lib/auth';
+import { meQuery } from '../lib/me';
 
-const organizationIdSchema = z.uuid();
+type Field = 'email' | 'password';
 
-/** Development sign-in (ADR 003): pick an organization. Replaced by Better Auth. */
 export function LoginPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const signIn = useSession((state) => state.signIn);
-  const [value, setValue] = useState('');
-  const [invalid, setInvalid] = useState(false);
-  const inputId = useId();
-  const hintId = useId();
-  const errorId = useId();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+
+  const signIn = useMutation({
+    mutationFn: authApi.signIn,
+    onSuccess: async () => {
+      // The cached "no session" answer is now wrong: the home route reloads /me and picks the page.
+      queryClient.removeQueries({ queryKey: meQuery.queryKey });
+      await navigate({ to: '/' });
+    },
+  });
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsed = organizationIdSchema.safeParse(value.trim());
+    const form = event.currentTarget;
+    const parsed = signInSchema.safeParse({ email: email.trim(), password });
     if (!parsed.success) {
-      setInvalid(true);
+      const fields = new Set(parsed.error.issues.map((issue) => issue.path[0]));
+      setErrors({
+        ...(fields.has('email') ? { email: t('auth.errors.emailInvalid') } : {}),
+        ...(fields.has('password') ? { password: t('auth.errors.passwordRequired') } : {}),
+      });
+      queueMicrotask(() => {
+        focusFirstInvalid(form);
+      });
       return;
     }
-    signIn(parsed.data);
-    void navigate({ to: '/posts' });
+    setErrors({});
+    signIn.mutate(parsed.data);
   }
+
+  const failure = signIn.error instanceof AuthError ? signIn.error.kind : 'unknown';
 
   return (
     <>
       <h1 className="mb-6 text-2xl font-semibold">{t('login.title')}</h1>
       <Card>
         <CardHeader>
-          <p className="w-fit rounded-md bg-secondary px-2 py-0.5 text-xs font-medium">
-            {t('app.devMode')}
-          </p>
           <CardDescription>{t('login.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form noValidate onSubmit={onSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor={inputId}>{t('login.organizationLabel')}</Label>
-              <Input
-                id={inputId}
-                name="organizationId"
-                autoComplete="off"
-                spellCheck={false}
-                value={value}
-                aria-invalid={invalid}
-                aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
-                onChange={(event) => {
-                  setValue(event.target.value);
-                  setInvalid(false);
-                }}
-              />
-              <p id={hintId} className="text-sm text-muted-foreground">
-                {t('login.organizationHint')}
+            <FormField
+              label={t('auth.email')}
+              name="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              error={errors.email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+            />
+            <FormField
+              label={t('auth.password')}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              error={errors.password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+              }}
+            />
+            {signIn.isError && (
+              <p role="alert" className="text-sm font-medium text-destructive">
+                {t(`auth.errors.${failure}`)}
               </p>
-              {invalid && (
-                <p id={errorId} role="alert" className="text-sm font-medium text-destructive">
-                  {t('login.invalidOrganization')}
-                </p>
-              )}
-            </div>
-            <Button type="submit" className="w-fit">
-              {t('login.submit')}
+            )}
+            <Button type="submit" className="w-fit" disabled={signIn.isPending}>
+              {signIn.isPending ? t('login.submitting') : t('login.submit')}
             </Button>
           </form>
+          <p className="mt-6 text-sm">
+            {t('login.noAccount')}{' '}
+            <Link to="/signup" className="font-medium underline underline-offset-4">
+              {t('login.signUpLink')}
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </>

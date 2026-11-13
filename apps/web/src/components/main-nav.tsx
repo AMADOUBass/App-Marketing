@@ -8,7 +8,7 @@ const linkClass =
 export function MainNav() {
   const { t } = useTranslation();
   return (
-    <nav aria-label={t('nav.label')} className="mb-6 flex gap-2">
+    <nav aria-label={t('nav.label')} className="flex gap-2">
       <Link to="/posts" className={linkClass}>
         {t('nav.posts')}
       </Link>

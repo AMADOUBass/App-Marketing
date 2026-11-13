@@ -51,6 +51,8 @@ export const envSchema = z
           .map((origin) => origin.trim())
           .filter(Boolean),
       ),
+    /** Per-IP limits on sign-in / sign-up (brute force). Off only in tests that create many users. */
+    AUTH_RATE_LIMIT: z.stringbool().default(true),
     /** Identity database role (app_auth): schema "auth" only. */
     AUTH_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 

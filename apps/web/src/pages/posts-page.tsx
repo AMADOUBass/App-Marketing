@@ -1,20 +1,15 @@
 import { postPageSchema } from '@ponctua/contracts';
 import { Button, Card, CardContent } from '@ponctua/ui';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MainNav } from '../components/main-nav';
-import { ApiError, apiGet } from '../lib/api';
+import { apiGet } from '../lib/api';
 import { useSession } from '../lib/session';
 
 const PAGE_SIZE = 20;
 
 export function PostsPage() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   const organizationId = useSession((state) => state.organizationId);
-  const signOut = useSession((state) => state.signOut);
 
   const posts = useInfiniteQuery({
     queryKey: ['posts', organizationId],
@@ -32,14 +27,6 @@ export function PostsPage() {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
 
-  // The organization was rejected (e.g. dev header disabled): back to sign-in.
-  const unauthorized = posts.error instanceof ApiError && posts.error.status === 401;
-  useEffect(() => {
-    if (!unauthorized) return;
-    signOut();
-    void navigate({ to: '/login' });
-  }, [unauthorized, signOut, navigate]);
-
   const dateFormat = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -48,31 +35,13 @@ export function PostsPage() {
 
   return (
     <>
-      <MainNav />
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('posts.title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('posts.organization', { id: organizationId })}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            signOut();
-            void navigate({ to: '/login' });
-          }}
-        >
-          {t('posts.signOut')}
-        </Button>
-      </div>
+      <h1 className="mb-6 text-2xl font-semibold">{t('posts.title')}</h1>
 
       {/* Polite live region: loading and result states are announced without moving focus. */}
       <div aria-live="polite" aria-busy={posts.isPending}>
         {posts.isPending && <p>{t('posts.loading')}</p>}
 
-        {posts.isError && !unauthorized && (
+        {posts.isError && (
           <div role="alert" className="grid justify-items-start gap-3">
             <p>{t('posts.error')}</p>
             <Button variant="outline" onClick={() => void posts.refetch()}>

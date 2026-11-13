@@ -2,7 +2,6 @@ import { instagramConnectResponseSchema, socialAccountListSchema } from '@ponctu
 import { Button, Card, CardContent } from '@ponctua/ui';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { MainNav } from '../components/main-nav';
 import { ApiError, apiGet } from '../lib/api';
 import { externalNavigation } from '../lib/navigation';
 import { useSession } from '../lib/session';
@@ -39,7 +38,6 @@ export function AccountsPage({ result }: { result: ConnectResult | undefined }) 
 
   return (
     <>
-      <MainNav />
       <h1 className="mb-6 text-2xl font-semibold">{t('accounts.title')}</h1>
 
       {result && (

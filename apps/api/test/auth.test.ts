@@ -3,6 +3,7 @@ import { createDb, type Db } from '@ponctua/db';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { ORGANIZATION_HEADER } from '../src/common/tenant.js';
+import { CLIENT_IP_HEADER, SIGN_IN_LIMIT } from '../src/modules/identity/auth.js';
 import { createLogCapture, createTestApp, createTestEnv } from './helpers.js';
 
 const PASSWORD = 'correct-horse-battery-staple';
@@ -194,5 +195,107 @@ describe('sessions', () => {
     const output = logs.raw.join('');
     expect(output).not.toContain(PASSWORD);
     expect(output).not.toContain(ivan.cookie.split('=')[1] ?? 'unreachable');
+  });
+});
+
+describe('brute-force protection', () => {
+  it('limits sign-in attempts per address, and a forged client-ip header does not reset the count', async () => {
+    const limited = await createTestApp({
+      env: createTestEnv({ DEV_TENANT_HEADER: 'false', AUTH_RATE_LIMIT: 'true' }),
+    });
+    try {
+      const attempt = (forgedIp: string) =>
+        limited.inject({
+          method: 'POST',
+          url: '/api/auth/sign-in/email',
+          headers: {
+            origin: 'http://localhost:5173',
+            [CLIENT_IP_HEADER]: forgedIp,
+            'x-forwarded-for': forgedIp,
+          },
+          payload: { email: 'nobody@test.ponctua.local', password: 'wrong-password-123' },
+        });
+
+      for (let i = 0; i < SIGN_IN_LIMIT; i++) {
+        expect((await attempt(`203.0.113.${String(i)}`)).statusCode).toBe(401);
+      }
+      expect((await attempt('198.51.100.7')).statusCode).toBe(429);
+    } finally {
+      await limited.close();
+    }
+  });
+});
+
+describe('error codes the web app relies on', () => {
+  it('wrong password and unknown email give the same answer (no account probing)', async () => {
+    const judy = await signUp('Judy');
+    const me = await app.inject({ url: '/api/v1/me', headers: { cookie: judy.cookie } });
+    const email = me.json<{ user: { email: string } }>().user.email;
+    const signIn = (address: string) =>
+      app.inject({
+        method: 'POST',
+        url: '/api/auth/sign-in/email',
+        headers: { origin: 'http://localhost:5173' },
+        payload: { email: address, password: 'wrong-password-123' },
+      });
+
+    const wrongPassword = await signIn(email);
+    const unknownEmail = await signIn(`nobody-${randomUUIDv7()}@test.ponctua.local`);
+
+    expect(wrongPassword.statusCode).toBe(401);
+    expect(unknownEmail.statusCode).toBe(401);
+    expect(wrongPassword.json()).toMatchObject({ code: 'INVALID_EMAIL_OR_PASSWORD' });
+    expect(unknownEmail.json()).toEqual(wrongPassword.json());
+  });
+
+  it('a second sign-up with the same email is refused with a stable code', async () => {
+    const email = `kim-${randomUUIDv7()}@test.ponctua.local`;
+    const signUpWith = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/auth/sign-up/email',
+        headers: { origin: 'http://localhost:5173' },
+        payload: { name: 'Kim', email, password: PASSWORD },
+      });
+
+    expect((await signUpWith()).statusCode).toBe(200);
+    const again = await signUpWith();
+    expect(again.statusCode).toBe(422);
+    expect(again.json()).toMatchObject({ code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' });
+  });
+
+  it('a short password is refused with PASSWORD_TOO_SHORT', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/sign-up/email',
+      headers: { origin: 'http://localhost:5173' },
+      payload: {
+        name: 'Leo',
+        email: `leo-${randomUUIDv7()}@test.ponctua.local`,
+        password: 'short',
+      },
+    });
+    expect(res.json()).toMatchObject({ code: 'PASSWORD_TOO_SHORT' });
+  });
+
+  // Better Auth checks the origin when the request carries a cookie or Fetch Metadata headers, which
+  // every current browser sends: a cross-site page cannot sign someone up or in (CSRF).
+  it('a browser request from an untrusted origin is refused', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/sign-up/email',
+      headers: {
+        origin: 'https://evil.example',
+        'sec-fetch-site': 'cross-site',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-dest': 'empty',
+      },
+      payload: {
+        name: 'Eve',
+        email: `eve-${randomUUIDv7()}@test.ponctua.local`,
+        password: PASSWORD,
+      },
+    });
+    expect(res.statusCode).toBe(403);
   });
 });

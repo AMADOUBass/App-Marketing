@@ -1,8 +1,7 @@
 {
   "app": {
     "name": "Ponctua",
-    "skipToContent": "Skip to main content",
-    "devMode": "Development mode"
+    "skipToContent": "Skip to main content"
   },
   "language": {
     "label": "Language",
@@ -11,16 +10,14 @@
   },
   "login": {
     "title": "Sign in",
-    "description": "Choose the organization to use. Real sign-in will come with account management.",
-    "organizationLabel": "Organization ID",
-    "organizationHint": "Run “pnpm db:seed” to create demo organizations and print their IDs.",
-    "invalidOrganization": "Enter a valid ID (UUID format).",
-    "submit": "Continue"
+    "description": "Sign in to your Ponctua workspace.",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "noAccount": "No account yet?",
+    "signUpLink": "Create an account"
   },
   "posts": {
     "title": "Posts",
-    "organization": "Organization: {{id}}",
-    "signOut": "Switch organization",
     "loading": "Loading posts…",
     "empty": "No posts yet.",
     "error": "Could not load posts.",
@@ -52,5 +49,62 @@
       "no_account": "No Instagram professional account was shared with the app.",
       "failed": "The Instagram connection failed. Please try again."
     }
+  },
+  "auth": {
+    "name": "Name",
+    "email": "Email address",
+    "password": "Password",
+    "passwordHint": "At least {{count}} characters. A passphrase is easier to remember.",
+    "errors": {
+      "nameRequired": "Enter your name.",
+      "emailInvalid": "Enter a valid email address, for example name@agency.ca.",
+      "invalidEmail": "Enter a valid email address, for example name@agency.ca.",
+      "passwordRequired": "Enter your password.",
+      "passwordTooShort": "The password must be at least {{count}} characters long.",
+      "invalidCredentials": "Incorrect email address or password.",
+      "emailTaken": "An account already exists with this address. Sign in instead.",
+      "tooManyAttempts": "Too many attempts. Wait a minute, then try again.",
+      "unknown": "Something went wrong. Try again."
+    }
+  },
+  "signup": {
+    "title": "Create an account",
+    "description": "Create your account, then your organization to invite your team.",
+    "submit": "Create my account",
+    "submitting": "Creating account…",
+    "haveAccount": "Already have an account?",
+    "signInLink": "Sign in"
+  },
+  "organizations": {
+    "title": "Choose an organization",
+    "description": "You belong to several organizations. Choose the one to work in.",
+    "open": "Open",
+    "openNamed": "Open {{name}}",
+    "create": "Create an organization",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Administrator",
+      "member": "Member"
+    },
+    "new": {
+      "title": "Create your organization",
+      "description": "An organization brings together your team and the clients you manage. You will be its owner.",
+      "nameLabel": "Organization name",
+      "nameHint": "For example, the name of your agency.",
+      "nameInvalid": "The name must be between 2 and 120 characters.",
+      "submit": "Create organization",
+      "submitting": "Creating…",
+      "error": "Could not create the organization. Try again.",
+      "back": "Back to my organizations"
+    }
+  },
+  "session": {
+    "organizationLabel": "Organization",
+    "signOut": "Sign out",
+    "signOutError": "Sign-out failed. Try again."
+  },
+  "errors": {
+    "page": "The page could not be loaded.",
+    "retry": "Try again"
   }
 }

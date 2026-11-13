@@ -13,6 +13,8 @@ export function createTestEnv(overrides: Record<string, string> = {}): Env {
     BETTER_AUTH_SECRET: 'test-better-auth-secret-0123456789abcdef',
     BETTER_AUTH_URL: 'http://localhost:5173',
     AUTH_DATABASE_URL: inject('authDatabaseUrl'),
+    // Tests sign up many users from one address; the limit has its own test.
+    AUTH_RATE_LIMIT: 'false',
     ...overrides,
   });
 }

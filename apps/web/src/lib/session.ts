@@ -2,24 +2,27 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface SessionState {
-  /** Organization chosen on the dev sign-in page (ADR 003). Replaced by a real session later. */
+  /**
+   * Organization the user is working in. Only a preference: the API checks membership on every
+   * request, and the router re-checks it against /me on each navigation.
+   */
   organizationId: string | null;
-  signIn: (organizationId: string) => void;
-  signOut: () => void;
+  selectOrganization: (organizationId: string) => void;
+  clear: () => void;
 }
 
-/** Per-tab session (sessionStorage): closing the tab forgets the organization. */
+/** Per-tab (sessionStorage): two tabs can work in two organizations. */
 export const useSession = create<SessionState>()(
   persist(
     (set) => ({
       organizationId: null,
-      signIn: (organizationId) => {
+      selectOrganization: (organizationId) => {
         set({ organizationId });
       },
-      signOut: () => {
+      clear: () => {
         set({ organizationId: null });
       },
     }),
-    { name: 'app-session', storage: createJSONStorage(() => sessionStorage) },
+    { name: 'ponctua-organization', storage: createJSONStorage(() => sessionStorage) },
   ),
 );

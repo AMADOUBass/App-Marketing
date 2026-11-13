@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import en from '../src/i18n/locales/en.json';
 import fr from '../src/i18n/locales/fr.json';
-import { renderApp } from './helpers';
+import { mockApi, renderApp, SIGNED_OUT } from './helpers';
 
 function keys(value: unknown, prefix = ''): string[] {
   if (typeof value !== 'object' || value === null) return [prefix];
@@ -26,6 +26,7 @@ describe('translations', () => {
   });
 
   it('switches the interface and <html lang> to English', async () => {
+    mockApi({ '/api/v1/me': SIGNED_OUT });
     renderApp('/login');
     expect(await screen.findByRole('heading', { level: 1, name: 'Connexion' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('fr');
@@ -40,6 +41,7 @@ describe('translations', () => {
   });
 
   it('offers a skip link to the main content as the first focusable element', async () => {
+    mockApi({ '/api/v1/me': SIGNED_OUT });
     renderApp('/login');
     await screen.findByRole('heading', { level: 1 });
 
