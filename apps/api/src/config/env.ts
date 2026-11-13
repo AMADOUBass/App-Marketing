@@ -31,11 +31,6 @@ export const envSchema = z
     LOG_PRETTY: z.stringbool().default(false),
     /** Runtime connection (app_user role, subject to row-level security). */
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-    /**
-     * Temporary tenant resolution until Better Auth (ADR 003): trusts the x-dev-organization-id header.
-     * Refused in production.
-     */
-    DEV_TENANT_HEADER: z.stringbool().default(false),
 
     /** Better Auth (ADR 008). Signs session cookies: 32+ random characters, never committed. */
     BETTER_AUTH_SECRET: secret(32),
@@ -85,13 +80,6 @@ export const envSchema = z
           message: 'required once any Instagram integration variable is set',
         });
       }
-    }
-    if (env.NODE_ENV === 'production' && env.DEV_TENANT_HEADER) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['DEV_TENANT_HEADER'],
-        message: 'must not be enabled in production (anyone could pick any organization)',
-      });
     }
   });
 

@@ -14,14 +14,11 @@ import type { Db, OrganizationRole } from '@ponctua/db';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { ENV, type Env } from '../config/env.js';
 import { AUTH, type Auth } from '../modules/identity/auth.js';
 import { DB } from './db.module.js';
 
 /** The organization a signed-in user acts for (chosen in the web app, checked on every request). */
 export const ORGANIZATION_HEADER = 'x-organization-id';
-/** Temporary development fallback (ADR 003), removed once the web sign-in ships. */
-export const DEV_TENANT_HEADER = 'x-dev-organization-id';
 
 const IS_PUBLIC = Symbol('IS_PUBLIC');
 const SESSION_ONLY = Symbol('SESSION_ONLY');
@@ -49,7 +46,6 @@ const organizationIdSchema = z.uuid();
 export class TenantGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    @Inject(ENV) private readonly env: Env,
     @Inject(AUTH) private readonly auth: Auth,
     @Inject(DB) private readonly db: Db,
   ) {}
@@ -68,32 +64,21 @@ export class TenantGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<TenantRequest>();
 
     const session = await this.auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
-    if (session) {
-      request.userId = session.user.id;
-      if (this.flag(SESSION_ONLY, context)) return true;
+    if (!session) throw new UnauthorizedException('Authentication required');
+    request.userId = session.user.id;
+    if (this.flag(SESSION_ONLY, context)) return true;
 
-      const parsed = organizationIdSchema.safeParse(request.headers[ORGANIZATION_HEADER]);
-      if (!parsed.success) throw new BadRequestException(`${ORGANIZATION_HEADER} header required`);
+    const parsed = organizationIdSchema.safeParse(request.headers[ORGANIZATION_HEADER]);
+    if (!parsed.success) throw new BadRequestException(`${ORGANIZATION_HEADER} header required`);
 
-      const membership = await this.db.withTenant(parsed.data, (tx) =>
-        tx.membership.findFirst({ where: { userId: session.user.id }, select: { role: true } }),
-      );
-      if (!membership) throw new ForbiddenException('Not a member of this organization');
+    const membership = await this.db.withTenant(parsed.data, (tx) =>
+      tx.membership.findFirst({ where: { userId: session.user.id }, select: { role: true } }),
+    );
+    if (!membership) throw new ForbiddenException('Not a member of this organization');
 
-      request.organizationId = parsed.data;
-      request.organizationRole = membership.role;
-      return true;
-    }
-
-    // Development fallback (ADR 003): refused in production by env validation.
-    if (this.env.DEV_TENANT_HEADER && !this.flag(SESSION_ONLY, context)) {
-      const parsed = organizationIdSchema.safeParse(request.headers[DEV_TENANT_HEADER]);
-      if (parsed.success) {
-        request.organizationId = parsed.data;
-        return true;
-      }
-    }
-    throw new UnauthorizedException('Authentication required');
+    request.organizationId = parsed.data;
+    request.organizationRole = membership.role;
+    return true;
   }
 }
 

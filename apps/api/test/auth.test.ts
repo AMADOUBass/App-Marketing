@@ -69,9 +69,8 @@ async function addPost(organizationId: string, body: string): Promise<string> {
 
 beforeAll(async () => {
   db = createDb({ connectionString: inject('databaseUrl') });
-  // Session-only app: the development header fallback is off, as in production.
   app = await createTestApp({
-    env: createTestEnv({ DEV_TENANT_HEADER: 'false' }),
+    env: createTestEnv(),
     logStream: logs.stream,
   });
 });
@@ -179,7 +178,7 @@ describe('sessions', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('the development header is ignored when the fallback is off (production behaviour)', async () => {
+  it('the removed development header (ADR 003) grants nothing', async () => {
     const org = await createOrganization(await signUp('Heidi'), 'Heidi Studio');
     const res = await app.inject({
       url: '/api/v1/posts',
@@ -201,7 +200,7 @@ describe('sessions', () => {
 describe('brute-force protection', () => {
   it('limits sign-in attempts per address, and a forged client-ip header does not reset the count', async () => {
     const limited = await createTestApp({
-      env: createTestEnv({ DEV_TENANT_HEADER: 'false', AUTH_RATE_LIMIT: 'true' }),
+      env: createTestEnv({ AUTH_RATE_LIMIT: 'true' }),
     });
     try {
       const attempt = (forgedIp: string) =>

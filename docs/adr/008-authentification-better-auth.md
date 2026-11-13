@@ -50,13 +50,29 @@ Option **B**.
    - en-tête `x-organization-id` absent ou invalide → **400** (aucune route métier ne s'exécute sans
      organisation) ;
    - pas d'adhésion à cette organisation (vérifiée dans `withTenant`) → **403**.
-     Les routes `@SessionOnly()` (`/me`, création d'organisation) n'exigent pas d'organisation. L'en-tête de
-     dev `x-dev-organization-id` (ADR 003) reste un repli quand il n'y a pas de session, toujours interdit en
-     production, jusqu'à l'étape 2 (pages web).
+     Les routes `@SessionOnly()` (`/me`, création d'organisation) n'exigent pas d'organisation. Il n'y a
+     plus d'autre moyen de choisir une organisation : l'en-tête de dev `x-dev-organization-id` et
+     `DEV_TENANT_HEADER` (ADR 003) sont supprimés depuis l'étape 2.
 8. **Cookie seulement** : la session est dans un cookie `ponctua.session_token` httpOnly et SameSite=Lax.
    Better Auth renvoie aussi le jeton dans le corps JSON (usage « bearer ») : nous le **retirons** de toutes
    les réponses, pour qu'aucun script de la page ne puisse le lire.
-9. **Mots de passe** : 12 caractères minimum. Pas de télémétrie Better Auth.
+9. **Mots de passe** : 12 caractères minimum (`PASSWORD_MIN_LENGTH` dans `@ponctua/contracts`, partagé par
+   le formulaire web et Better Auth). Pas de télémétrie Better Auth.
+10. **Limite de débit** (force brute) : 10 connexions et 5 inscriptions par minute et par adresse IP.
+    L'adresse vient de Fastify (`request.ip`, donc du socket, ou d'un proxy de confiance via `trustProxy`),
+    passée à Better Auth dans un en-tête interne qui **écrase** toute valeur envoyée par le client : un
+    `X-Forwarded-For` forgé ne remet pas le compteur à zéro (testé). Stockage en mémoire : suffisant pour
+    une instance d'api, à passer dans Valkey avant d'en lancer plusieurs.
+11. **Vérification d'origine (CSRF) forcée** : Better Auth la désactive tout seul quand il croit tourner
+    en test (`isTest()`). Nous fixons `disableOriginCheck: false` et `disableCSRFCheck: false` : aucune
+    détection d'environnement ne peut la couper, et les tests vérifient le vrai comportement. Sans cookie,
+    Better Auth ne contrôle l'origine que si la requête porte les en-têtes Fetch Metadata (`Sec-Fetch-*`),
+    ce que font tous les navigateurs actuels ; un client hors navigateur peut forger `Origin` de toute façon.
+12. **Messages d'erreur** : « courriel ou mot de passe incorrect » est identique que le compte existe ou
+    non (testé). L'inscription, elle, dit « adresse déjà utilisée » : c'est la limite connue de toute
+    inscription ouverte ; la vérification d'e-mail (étape 3) permettra de répondre de façon neutre.
+13. **Logs** : les messages de Better Auth passent par le logger Nest (pino, JSON), sans leurs arguments
+    supplémentaires, qui pourraient contenir des données de requête.
 
 ## Conséquences
 
@@ -67,5 +83,9 @@ Option **B**.
   doit le rejouer, ou être recréée avec `pnpm infra:reset`.
 - 2FA, passkeys, vérification d'e-mail et réinitialisation viennent à l'étape 3, comme plugins Better Auth
   sur les mêmes tables.
-- Étape 2 : pages web de connexion et d'organisation, puis retrait du repli `x-dev-organization-id`.
-  L'ADR 003 sera alors entièrement remplacé.
+- Étape 2 (faite) : pages web d'inscription, de connexion, de choix et de création d'organisation,
+  déconnexion. Le web garde seulement l'organisation choisie (`sessionStorage`), revérifiée contre `/me`
+  à chaque navigation ; le cache des requêtes est vidé à chaque changement d'organisation et à la
+  déconnexion. L'ADR 003 est entièrement remplacé.
+- Données de démo : `pnpm db:seed` crée aussi l'utilisateur local `demo@ponctua.local`, propriétaire des
+  organisations de démo (`-- --org <id>` pour en rejoindre une autre).

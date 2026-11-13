@@ -1,6 +1,7 @@
 # ADR 003 — Contexte d'organisation provisoire avant Better Auth
 
-- Statut : accepté (temporaire — à remplacer à l'arrivée de Better Auth)
+- Statut : **remplacé par l'ADR 008** le 2026-11-13 (en-tête `x-dev-organization-id` et
+  `DEV_TENANT_HEADER` supprimés : l'organisation vient d'une session et d'une adhésion vérifiée)
 - Date : 2026-11-11
 - Tâche : phase 0, 0.5
 

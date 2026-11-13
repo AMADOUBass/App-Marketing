@@ -19,7 +19,6 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       LOG_PRETTY: false,
       DATABASE_URL,
-      DEV_TENANT_HEADER: false,
       BETTER_AUTH_URL: 'http://localhost:5173',
       TRUSTED_ORIGINS: [],
     });
@@ -67,12 +66,8 @@ describe('parseEnv', () => {
     expect(message).not.toContain('s3cr3t');
   });
 
-  it('refuses the dev tenant header in production', () => {
-    expect(() =>
-      parseEnv({ DATABASE_URL, ...AUTH, NODE_ENV: 'production', DEV_TENANT_HEADER: 'true' }),
-    ).toThrow(/DEV_TENANT_HEADER/);
-    expect(parseEnv({ DATABASE_URL, ...AUTH, NODE_ENV: 'production' }).DEV_TENANT_HEADER).toBe(
-      false,
-    );
+  it('a leftover DEV_TENANT_HEADER (removed, ADR 008) is ignored and enables nothing', () => {
+    const env = parseEnv({ DATABASE_URL, ...AUTH, DEV_TENANT_HEADER: 'true' });
+    expect(env).not.toHaveProperty('DEV_TENANT_HEADER');
   });
 });

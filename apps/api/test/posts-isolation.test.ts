@@ -2,12 +2,14 @@ import { randomUUIDv7 } from 'node:crypto';
 import { createDb, type Db } from '@ponctua/db';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
-import { DEV_TENANT_HEADER } from '../src/common/tenant.js';
-import { createTestApp, createTestEnv } from './helpers.js';
+import { ORGANIZATION_HEADER } from '../src/common/tenant.js';
+import { addMember, asMember, createTestApp, signUpUser, type TestUser } from './helpers.js';
 
 interface Tenant {
   orgId: string;
   postIds: string[];
+  /** A signed-in member of this organization only. */
+  member: TestUser;
 }
 
 let app: NestFastifyApplication;
@@ -34,10 +36,13 @@ async function seedTenant(name: string, posts: number): Promise<Tenant> {
     }
     return ids;
   });
-  return { orgId: org.id, postIds };
+  const member = await signUpUser(app, `${name} member`);
+  await addMember(db, org.id, member);
+  return { orgId: org.id, postIds, member };
 }
 
-const as = (tenant: Tenant) => ({ [DEV_TENANT_HEADER]: tenant.orgId });
+/** A member of the tenant, acting for it. */
+const as = (tenant: Tenant) => asMember(tenant.member, tenant.orgId);
 
 function firstPost(tenant: Tenant): string {
   const id = tenant.postIds[0];
@@ -47,9 +52,9 @@ function firstPost(tenant: Tenant): string {
 
 beforeAll(async () => {
   db = createDb({ connectionString: inject('databaseUrl') });
+  app = await createTestApp();
   a = await seedTenant('Org A', 3);
   b = await seedTenant('Org B', 1);
-  app = await createTestApp();
 });
 
 afterAll(async () => {
@@ -127,27 +132,37 @@ describe('organization A cannot write organization B through the API', () => {
 });
 
 describe('organization context', () => {
-  it('returns 401 without an organization', async () => {
+  it('returns 401 without a session', async () => {
     const res = await app.inject({ url: '/api/v1/posts' });
 
     expect(res.statusCode).toBe(401);
     expect(res.headers['content-type']).toMatch(/^application\/problem\+json/);
   });
 
-  it.each(['not-a-uuid', "x' OR '1'='1", ''])('returns 401 for organization %j', async (orgId) => {
-    const res = await app.inject({ url: '/api/v1/posts', headers: { [DEV_TENANT_HEADER]: orgId } });
+  it.each(['not-a-uuid', "x' OR '1'='1", ''])('returns 400 for organization %j', async (orgId) => {
+    const res = await app.inject({
+      url: '/api/v1/posts',
+      headers: { cookie: a.member.cookie, [ORGANIZATION_HEADER]: orgId },
+    });
 
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(400);
+    expect(res.headers['content-type']).toMatch(/^application\/problem\+json/);
   });
 
-  it('returns 401 when the dev header is disabled, even with a valid organization', async () => {
-    const locked = await createTestApp({ env: createTestEnv({ DEV_TENANT_HEADER: 'false' }) });
-    try {
-      const res = await locked.inject({ url: '/api/v1/posts', headers: as(a) });
-      expect(res.statusCode).toBe(401);
-    } finally {
-      await locked.close();
-    }
+  it('returns 403 for a member of A naming B, and never runs the request', async () => {
+    const res = await app.inject({ url: '/api/v1/posts', headers: asMember(a.member, b.orgId) });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).not.toContain('Org B');
+  });
+
+  it('the removed development header grants nothing', async () => {
+    const res = await app.inject({
+      url: '/api/v1/posts',
+      headers: { 'x-dev-organization-id': a.orgId },
+    });
+
+    expect(res.statusCode).toBe(401);
   });
 
   it('returns 400 problem+json for an invalid post id', async () => {

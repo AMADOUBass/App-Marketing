@@ -235,7 +235,7 @@ pnpm infra:up       # postgres, valkey, rustfs (attend qu'ils soient healthy) ; 
 pnpm check          # format:check + typecheck + lint + test (comme la CI)
 pnpm format         # Prettier --write
 pnpm dev            # web (http://localhost:5173) + api (:3000) + worker (PROCESS_ROLE=all) en watch — copier apps/*/.env.example → .env
-pnpm db:seed        # organisations de démonstration (ids fixes, affichés) pour se connecter sur le web
+pnpm db:seed        # organisations de démo + utilisateur demo@ponctua.local (mot de passe affiché) ; -- --org <id> pour rejoindre une autre organisation
 pnpm vault:keygen   # nouvelle paire de clés maître du coffre à jetons : publique → api, privée → worker SEULEMENT (ADR 006)
 pnpm tunnel         # adresse HTTPS publique de dev (Cloudflare, Docker) vers le web :5173 — change à chaque lancement (ADR 007)
 pnpm dev:test-post -- --org <id> --image <https jpeg>  # programme un post de test sur le compte Instagram connecté
@@ -288,7 +288,7 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 
 - [x] 1. Serveur : schéma `auth` (rôle `app_auth` seul), `/api/auth/*`, `GET /api/v1/me`, `POST /api/v1/organizations`,
   `TenantGuard` session → `x-organization-id` → adhésion (401 / 400 / 403) ; jeton jamais dans le JSON
-- [ ] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; retrait de `x-dev-organization-id` (fin de l'ADR 003)
+- [x] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; limite de débit ; `x-dev-organization-id` supprimé (ADR 003 remplacé)
 - [ ] 3. 2FA TOTP, passkeys, vérification d'e-mail et réinitialisation (Mailpit en dev)
 
 **Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →

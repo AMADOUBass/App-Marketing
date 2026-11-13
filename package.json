@@ -18,7 +18,7 @@
     "db:generate": "turbo run generate",
     "db:migrate": "pnpm --filter @ponctua/db migrate",
     "db:migrate:dev": "pnpm --filter @ponctua/db migrate:dev",
-    "db:seed": "turbo run build --filter=@ponctua/db && pnpm --filter @ponctua/db seed",
+    "db:seed": "turbo run build --filter=@ponctua/api && pnpm --filter @ponctua/db seed && pnpm --filter @ponctua/api seed-user --",
     "dev:test-post": "turbo run build --filter=@ponctua/db && pnpm --filter @ponctua/db test-post --",
     "tunnel": "docker run --rm --name app-dev-tunnel cloudflare/cloudflared:2026.10.7 tunnel --no-autoupdate --url http://host.docker.internal:5173",
     "vault:keygen": "turbo run build --filter=@ponctua/vault && pnpm --filter @ponctua/vault keygen",

@@ -4,9 +4,16 @@ import type { FetchLike } from '@ponctua/integrations';
 import { createVaultOpener } from '@ponctua/vault/open';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
-import { DEV_TENANT_HEADER } from '../src/common/tenant.js';
 import { verifyOAuthState } from '../src/modules/integrations/oauth-state.js';
-import { createLogCapture, createTestApp, createTestEnv } from './helpers.js';
+import {
+  addMember,
+  asMember,
+  createLogCapture,
+  createTestApp,
+  createTestEnv,
+  signUpUser,
+  type TestUser,
+} from './helpers.js';
 
 const IG_ACCOUNT_ID = '17841472428926955';
 const ACCESS_TOKEN = 'EAAG-system-user-token-never-in-clear';
@@ -79,6 +86,9 @@ function fakeGraph(options: { exchangeFails?: boolean } = {}) {
 let db: Db;
 let orgA: string;
 let orgB: string;
+/** Signed-in owners of A and of B (each a member of one organization only). */
+let ownerA: TestUser;
+let ownerB: TestUser;
 
 beforeAll(async () => {
   db = createDb({ connectionString: inject('databaseUrl') });
@@ -90,6 +100,13 @@ beforeAll(async () => {
     if (name === 'A') orgA = org.id;
     else orgB = org.id;
   }
+  // Sessions are rows in the database: valid for every app instance started below.
+  const bootstrap = await createTestApp();
+  ownerA = await signUpUser(bootstrap, 'Owner A');
+  ownerB = await signUpUser(bootstrap, 'Owner B');
+  await bootstrap.close();
+  await addMember(db, orgA, ownerA);
+  await addMember(db, orgB, ownerB);
 });
 
 afterAll(async () => {
@@ -106,10 +123,14 @@ async function startApp(graph = fakeGraph(), extraEnv: Record<string, string> = 
   return { app, logs, graph };
 }
 
+/** Members acting for their own organization. */
+const ownerOf = (organizationId: string) =>
+  asMember(organizationId === orgA ? ownerA : ownerB, organizationId);
+
 async function loginState(app: NestFastifyApplication, organizationId: string): Promise<string> {
   const res = await app.inject({
     url: '/api/v1/integrations/instagram/connect',
-    headers: { [DEV_TENANT_HEADER]: organizationId },
+    headers: ownerOf(organizationId),
   });
   expect(res.statusCode).toBe(200);
   return new URL(res.json<{ loginUrl: string }>().loginUrl).searchParams.get('state') ?? '';
@@ -130,7 +151,7 @@ describe('connecting an Instagram account', () => {
   it('the login URL carries the configuration and a state signed for the caller organization', async () => {
     const res = await ctx.app.inject({
       url: '/api/v1/integrations/instagram/connect',
-      headers: { [DEV_TENANT_HEADER]: orgA },
+      headers: ownerOf(orgA),
     });
     const url = new URL(res.json<{ loginUrl: string }>().loginUrl);
 
@@ -157,11 +178,11 @@ describe('connecting an Instagram account', () => {
 
     const listA = await ctx.app.inject({
       url: '/api/v1/social-accounts',
-      headers: { [DEV_TENANT_HEADER]: orgA },
+      headers: ownerOf(orgA),
     });
     const listB = await ctx.app.inject({
       url: '/api/v1/social-accounts',
-      headers: { [DEV_TENANT_HEADER]: orgB },
+      headers: ownerOf(orgB),
     });
     expect(listA.json()).toMatchObject({
       items: [
@@ -251,7 +272,7 @@ describe('failures and configuration', () => {
     const ctx = await startApp(fakeGraph(), {});
     const res = await ctx.app.inject({
       url: '/api/v1/integrations/instagram/connect',
-      headers: { [DEV_TENANT_HEADER]: orgA },
+      headers: ownerOf(orgA),
     });
     expect(res.statusCode).toBe(503);
     await ctx.app.close();
@@ -261,6 +282,17 @@ describe('failures and configuration', () => {
     const ctx = await startApp();
     const res = await ctx.app.inject({ url: '/api/v1/integrations/instagram/connect' });
     expect(res.statusCode).toBe(401);
+    await ctx.app.close();
+  });
+
+  it('a member of B cannot start a connection for A (403): no state is signed for A', async () => {
+    const ctx = await startApp();
+    const res = await ctx.app.inject({
+      url: '/api/v1/integrations/instagram/connect',
+      headers: asMember(ownerB, orgA),
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.body).not.toContain('state=');
     await ctx.app.close();
   });
 
