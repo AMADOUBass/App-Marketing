@@ -2,12 +2,13 @@ import { signInSchema } from '@ponctua/contracts';
 import { Button, Card, CardContent, CardDescription, CardHeader } from '@ponctua/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { type SubmitEvent, useState } from 'react';
+import { type SubmitEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, focusFirstInvalid } from '../components/form-field';
 import { TwoFactorStep } from '../components/two-factor-step';
 import { AuthError, authApi } from '../lib/auth';
 import { meQuery } from '../lib/me';
+import { passkeys } from '../lib/passkeys';
 
 type Field = 'email' | 'password';
 
@@ -26,6 +27,34 @@ export function LoginPage() {
     queryClient.removeQueries({ queryKey: meQuery.queryKey });
     await navigate({ to: '/' });
   }
+
+  const passkeySignIn = useMutation({
+    mutationFn: () => passkeys.signIn(),
+    onSuccess: signedIn,
+  });
+  const passkeyFailure =
+    passkeySignIn.error instanceof AuthError ? passkeySignIn.error.kind : 'unknown';
+
+  // Browsers with conditional UI list this site's passkeys in the email field's suggestions: picking
+  // one signs in, without typing anything. Silent until the user picks one.
+  useEffect(() => {
+    if (needsCode || !passkeys.supported()) return;
+    let active = true;
+    void passkeys.autofillSupported().then((available) => {
+      if (!available || !active) return;
+      passkeys.signIn(true).then(
+        () => {
+          queryClient.removeQueries({ queryKey: meQuery.queryKey });
+          void navigate({ to: '/' });
+        },
+        () => undefined, // Cancelled, or replaced by the button's request.
+      );
+    });
+    return () => {
+      active = false;
+      passkeys.cancelPending();
+    };
+  }, [needsCode, queryClient, navigate]);
 
   const signIn = useMutation({
     mutationFn: authApi.signIn,
@@ -82,7 +111,8 @@ export function LoginPage() {
                 label={t('auth.email')}
                 name="email"
                 type="email"
-                autoComplete="username"
+                // "webauthn": lets the browser offer passkeys in this field's suggestions.
+                autoComplete="username webauthn"
                 value={email}
                 error={errors.email}
                 onChange={(event) => {
@@ -117,6 +147,26 @@ export function LoginPage() {
                 </Link>
               </div>
             </form>
+            {passkeys.supported() && (
+              <div className="mt-6 grid gap-3 border-t pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-fit"
+                  disabled={passkeySignIn.isPending}
+                  onClick={() => {
+                    passkeySignIn.mutate();
+                  }}
+                >
+                  {t('passkeys.signIn')}
+                </Button>
+                {passkeySignIn.isError && passkeyFailure !== 'passkeyCancelled' && (
+                  <p role="alert" className="text-sm font-medium text-destructive">
+                    {t(`auth.errors.${passkeyFailure}`)}
+                  </p>
+                )}
+              </div>
+            )}
             <p className="mt-6 text-sm">
               {t('login.noAccount')}{' '}
               <Link to="/signup" className="font-medium underline underline-offset-4">

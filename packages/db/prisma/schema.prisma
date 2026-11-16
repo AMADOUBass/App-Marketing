@@ -289,6 +289,7 @@ model User {
   sessions    Session[]
   accounts    Account[]
   twoFactors  TwoFactor[]
+  passkeys    Passkey[]
   memberships Membership[]
 
   @@map("users")
@@ -367,5 +368,29 @@ model TwoFactor {
   /// One TOTP setup per user: enabling again updates it (Better Auth looks it up by user).
   @@unique([userId])
   @@map("two_factors")
+  @@schema("auth")
+}
+
+/// WebAuthn credentials (Better Auth passkey plugin, ADR 011): public keys only, the private key never
+/// leaves the user's device. Reachable by app_auth only, like the whole schema.
+model Passkey {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Label shown on the security page (e.g. "iCloud Keychain").
+  name         String?
+  publicKey    String   @map("public_key")
+  userId       String   @map("user_id") @db.Uuid
+  credentialID String   @unique @map("credential_id")
+  /// Signature counter: a value going backwards reveals a cloned authenticator.
+  counter      Int
+  deviceType   String   @map("device_type")
+  backedUp     Boolean  @map("backed_up")
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkeys")
   @@schema("auth")
 }

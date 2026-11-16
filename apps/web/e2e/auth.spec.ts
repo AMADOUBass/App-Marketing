@@ -95,7 +95,7 @@ test.describe('French-Canadian browser', () => {
     await page.getByRole('link', { name: 'Se connecter' }).click();
     await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
     await page.getByLabel('Mot de passe').fill('a-brand-new-passphrase');
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await expect(page).toHaveURL(/\/organizations\/new$/);
   });
 
@@ -107,7 +107,7 @@ test.describe('French-Canadian browser', () => {
 
     await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
     await page.getByLabel('Mot de passe').fill('pas-le-bon-mot-de-passe');
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
 
     await expect(page.getByRole('alert')).toHaveText('Adresse courriel ou mot de passe incorrect.');
     await expectNoAccessibilityViolations(page);

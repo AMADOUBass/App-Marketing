@@ -25,3 +25,15 @@ export const twoFactorEnableResultSchema = z.object({
   backupCodes: z.array(z.string()),
 });
 export const backupCodesResultSchema = z.object({ backupCodes: z.array(z.string()) });
+
+/** A passkey as listed on the security page (public data only: the private key never leaves the device). */
+export const passkeySummarySchema = z.object({
+  id: z.string(),
+  name: z.string().nullish(),
+  createdAt: z.coerce.date().nullish(),
+  /** "multiDevice": synced (iCloud Keychain, Google Password Manager…); "singleDevice": this device only. */
+  deviceType: z.string(),
+  backedUp: z.boolean(),
+});
+export type PasskeySummary = z.infer<typeof passkeySummarySchema>;
+export const passkeyListSchema = z.array(passkeySummarySchema);

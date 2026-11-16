@@ -2,7 +2,8 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@ponctua/contracts';
 import type { IdentityClient } from '@ponctua/db/identity';
 import { Logger } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
-import { createAuthMiddleware, isAPIError } from 'better-auth/api';
+import { passkey } from '@better-auth/passkey';
+import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api';
 import { twoFactor } from 'better-auth/plugins';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import type { Env } from '../../config/env.js';
@@ -30,9 +31,35 @@ export const TRUST_DEVICE_DAYS = 30;
  * Security changes made from a signed-in session: the owner is told by email, in case the session
  * was not theirs (ADR 010).
  */
+/**
+ * Adding a passkey gives lasting access to the account: a stolen or forgotten-open session must not be
+ * enough. The session has to be recent (signed in within this delay), as for any sensitive change.
+ */
+export const PASSKEY_FRESH_SESSION_SECONDS = 10 * 60;
+const FRESH_SESSION_PATHS = new Set([
+  '/passkey/generate-register-options',
+  '/passkey/verify-registration',
+]);
+
+/**
+ * Better Auth's passkey plugin checks WebAuthn signatures but not user verification (PIN, biometrics):
+ * a mere tap on a security key would then sign in and skip the second factor. Required here, so a
+ * passkey is worth a password + second factor (ADR 011).
+ */
+function requireUserVerification(userVerified: boolean | undefined): void {
+  if (userVerified !== true) {
+    throw new APIError('UNAUTHORIZED', {
+      code: 'USER_VERIFICATION_REQUIRED',
+      message: 'The authenticator did not verify the user (PIN or biometrics)',
+    });
+  }
+}
+
 const NOTIFIED_CHANGES: Record<string, AuthEmailKind> = {
   '/change-password': 'passwordUpdated',
   '/two-factor/disable': 'twoFactorDisabled',
+  '/passkey/verify-registration': 'passkeyAdded',
+  '/passkey/delete-passkey': 'passkeyRemoved',
 };
 
 /** Web pages the email links come back to (relative: same origin as BETTER_AUTH_URL). */
@@ -141,6 +168,25 @@ export function createAuth(env: Env, prisma: IdentityClient, mailer: Mailer) {
       },
     },
     plugins: [
+      // WebAuthn passkeys (ADR 011). Relying party = the web app's host; the origin is fixed rather than
+      // taken from the request (the plugin's default). Discoverable credentials: sign-in without typing
+      // an address. Passkeys do not work from an IP address (127.0.0.1): use localhost in development.
+      passkey({
+        rpID: new URL(env.BETTER_AUTH_URL).hostname,
+        rpName: 'Ponctua',
+        origin: new URL(env.BETTER_AUTH_URL).origin,
+        authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+        registration: {
+          afterVerification: ({ verification }) => {
+            requireUserVerification(verification.registrationInfo?.userVerified);
+          },
+        },
+        authentication: {
+          afterVerification: ({ verification }) => {
+            requireUserVerification(verification.authenticationInfo.userVerified);
+          },
+        },
+      }),
       // TOTP (authenticator app) + 10 one-time backup codes. The secret and the backup codes are
       // stored encrypted with BETTER_AUTH_SECRET; enabling needs the password and a first valid code.
       // Sign-in with a password then holds no session until the code is checked (ADR 010).
@@ -151,6 +197,18 @@ export function createAuth(env: Env, prisma: IdentityClient, mailer: Mailer) {
       }),
     ],
     hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (!FRESH_SESSION_PATHS.has(ctx.path)) return;
+        const session = await getSessionFromCtx(ctx);
+        if (!session) return; // The endpoint itself answers 401.
+        const age = Date.now() - new Date(session.session.createdAt).getTime();
+        if (age > PASSKEY_FRESH_SESSION_SECONDS * 1000) {
+          throw new APIError('FORBIDDEN', {
+            code: 'SESSION_NOT_FRESH',
+            message: 'Sign in again to make this change',
+          });
+        }
+      }),
       after: createAuthMiddleware(async (ctx) => {
         const kind = NOTIFIED_CHANGES[ctx.path];
         const user = ctx.context.session?.user;

@@ -7,7 +7,9 @@ export type AuthEmailKind =
   | 'existingAccount'
   | 'passwordChanged'
   | 'passwordUpdated'
-  | 'twoFactorDisabled';
+  | 'twoFactorDisabled'
+  | 'passkeyAdded'
+  | 'passkeyRemoved';
 
 /**
  * The language of the browser that triggered the email (Accept-Language), French by default.
@@ -73,6 +75,19 @@ const COPY: Record<EmailLanguage, Record<AuthEmailKind, Copy>> = {
       outro:
         "Si vous n'êtes pas à l'origine de ce changement, réinitialisez votre mot de passe tout de suite, puis réactivez la double authentification.",
     },
+    passkeyAdded: {
+      subject: 'Nouvelle passkey ajoutée — Ponctua',
+      intro:
+        'Une passkey vient d’être ajoutée à votre compte Ponctua : elle permet de se connecter sans mot de passe.',
+      outro:
+        "Si vous n'êtes pas à l'origine de cet ajout, supprimez-la dans Sécurité du compte et réinitialisez votre mot de passe.",
+    },
+    passkeyRemoved: {
+      subject: 'Passkey supprimée — Ponctua',
+      intro: 'Une passkey vient d’être supprimée de votre compte Ponctua.',
+      outro:
+        "Si vous n'êtes pas à l'origine de cette suppression, réinitialisez votre mot de passe tout de suite.",
+    },
   },
   en: {
     verifyEmail: {
@@ -115,6 +130,16 @@ const COPY: Record<EmailLanguage, Record<AuthEmailKind, Copy>> = {
       intro: 'Two-factor authentication was just turned off for your Ponctua account.',
       outro:
         'If you did not make this change, reset your password right away, then turn two-factor authentication back on.',
+    },
+    passkeyAdded: {
+      subject: 'New passkey added — Ponctua',
+      intro: 'A passkey was just added to your Ponctua account: it signs in without a password.',
+      outro: 'If you did not add it, remove it in Account security and reset your password.',
+    },
+    passkeyRemoved: {
+      subject: 'Passkey removed — Ponctua',
+      intro: 'A passkey was just removed from your Ponctua account.',
+      outro: 'If you did not remove it, reset your password right away.',
     },
   },
 };

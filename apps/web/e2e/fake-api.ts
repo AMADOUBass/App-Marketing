@@ -117,6 +117,19 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
       session.twoFactor = false;
       return json(route, 200, { status: true });
     }
+    // Passkeys: the WebAuthn ceremony itself is covered by apps/api/test/passkey.test.ts (software
+    // authenticator) and the web unit tests; here only the pages around it.
+    if (path === '/api/auth/passkey/generate-authenticate-options') {
+      return json(route, 200, {
+        challenge: 'ZTJlLWNoYWxsZW5nZQ',
+        rpId: 'localhost',
+        allowCredentials: [],
+      });
+    }
+    if (path === '/api/auth/passkey/list-user-passkeys') {
+      if (!session) return json(route, 401, problem(401, 'Unauthorized'));
+      return json(route, 200, []);
+    }
     if (path === '/api/auth/sign-out') {
       session = null;
       return json(route, 200, { success: true });

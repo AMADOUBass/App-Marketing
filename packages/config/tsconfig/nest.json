@@ -4,6 +4,8 @@
   "extends": "./node.json",
   "compilerOptions": {
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "declarationMap": false
   }
 }

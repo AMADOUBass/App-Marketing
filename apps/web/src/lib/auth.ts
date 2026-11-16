@@ -16,6 +16,10 @@ export type AuthErrorKind =
   | 'invalidCode'
   | 'codeExpired'
   | 'tooManyAttempts'
+  | 'sessionNotFresh'
+  | 'userVerificationRequired'
+  | 'passkeyFailed'
+  | 'passkeyCancelled'
   | 'unknown';
 
 export class AuthError extends Error {
@@ -40,6 +44,12 @@ const ERROR_KINDS: Record<string, AuthErrorKind> = {
   INVALID_TWO_FACTOR_COOKIE: 'codeExpired',
   TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'codeExpired',
   ACCOUNT_TEMPORARILY_LOCKED: 'tooManyAttempts',
+  // Passkeys (ADR 011).
+  SESSION_NOT_FRESH: 'sessionNotFresh',
+  USER_VERIFICATION_REQUIRED: 'userVerificationRequired',
+  PASSKEY_NOT_FOUND: 'passkeyFailed',
+  AUTHENTICATION_FAILED: 'passkeyFailed',
+  FAILED_TO_VERIFY_REGISTRATION: 'passkeyFailed',
 };
 
 /** Web pages the emailed links come back to (same paths as the API's EMAIL_VERIFIED_PATH…). */
@@ -50,12 +60,19 @@ export const RESET_PASSWORD_PATH = '/reset-password';
  * Better Auth endpoints. The session is an httpOnly cookie set by the server: nothing to store here,
  * and the API strips the session token from JSON bodies (ADR 008).
  */
-async function post(path: string, body: object = {}): Promise<unknown> {
+export async function authRequest(
+  method: 'GET' | 'POST',
+  path: string,
+  body: object = {},
+): Promise<unknown> {
   const response = await fetch(`/api/auth${path}`, {
-    method: 'POST',
+    method,
     credentials: 'same-origin',
-    headers: { accept: 'application/json', 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: {
+      accept: 'application/json',
+      ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
   });
   if (response.ok) return response.json().catch(() => null);
   if (response.status === 429) throw new AuthError('tooManyAttempts');
@@ -67,6 +84,8 @@ async function post(path: string, body: object = {}): Promise<unknown> {
       : '';
   throw new AuthError(ERROR_KINDS[code] ?? 'unknown');
 }
+
+const post = (path: string, body: object = {}) => authRequest('POST', path, body);
 
 export interface TwoFactorSetup {
   /** otpauth:// URI for the authenticator app (QR code). Kept in memory only, never stored. */

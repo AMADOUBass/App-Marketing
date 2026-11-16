@@ -5,6 +5,7 @@ import { type SubmitEvent, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackupCodes } from '../components/backup-codes';
 import { FormField, focusFirstInvalid } from '../components/form-field';
+import { PasskeysSection } from '../components/passkeys-section';
 import { PasswordConfirmForm } from '../components/password-confirm-form';
 import { TwoFactorSetup } from '../components/two-factor-setup';
 import { AuthError, authApi } from '../lib/auth';
@@ -242,6 +243,7 @@ export function SecurityPage() {
       <h1 className="mb-6 text-2xl font-semibold">{t('security.title')}</h1>
       <div className="grid gap-6">
         <TwoFactorSection />
+        <PasskeysSection />
         <ChangePasswordSection />
       </div>
     </>

@@ -292,7 +292,9 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 - [x] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; limite de débit ; `x-dev-organization-id` supprimé (ADR 003 remplacé)
 - [x] 3a. Vérification d'adresse obligatoire, mot de passe oublié, courriels SMTP (Mailpit en dev), jetons hachés (ADR 009)
 - [x] 3b. 2FA TOTP (page Sécurité `/settings/security`, codes de secours chiffrés, appareil de confiance 30 j, changement de mot de passe, avis par courriel — ADR 010)
-- [ ] 3c. Passkeys (`@better-auth/passkey`)
+- [x] 3c. Passkeys (`@better-auth/passkey`) : vérification de l'utilisateur exigée, origine fixée, session récente pour en ajouter, avis par courriel (ADR 011) — en dev, ouvrir **localhost**:5173 (pas 127.0.0.1)
+
+**Auth et multi-tenancy : terminé le 2026-11-16.** Restent pour plus tard : invitations et gestion des membres, 2FA obligatoire par organisation, rotation de `BETTER_AUTH_SECRET` (ADR 010).
 
 **Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.

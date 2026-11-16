@@ -70,7 +70,11 @@
       "invalidToken": "Ce lien est invalide ou a expiré.",
       "invalidPassword": "Mot de passe incorrect.",
       "invalidCode": "Code incorrect. Vérifiez l’heure de votre téléphone et réessayez.",
-      "codeExpired": "La vérification a expiré ou il y a eu trop d’essais. Reconnectez-vous avec votre mot de passe."
+      "codeExpired": "La vérification a expiré ou il y a eu trop d’essais. Reconnectez-vous avec votre mot de passe.",
+      "sessionNotFresh": "Par sécurité, ajouter une passkey demande une connexion récente. Reconnectez-vous, puis réessayez.",
+      "userVerificationRequired": "Votre appareil doit vérifier votre identité (code PIN, empreinte ou visage). Activez un verrouillage sur l’appareil, puis réessayez.",
+      "passkeyFailed": "La passkey n’a pas pu être vérifiée. Réessayez ou utilisez votre mot de passe.",
+      "passkeyCancelled": "Opération annulée."
     }
   },
   "signup": {
@@ -218,5 +222,27 @@
       "codeFormat": "Le code contient 6 chiffres.",
       "backupFormat": "Un code de secours a la forme XXXXX-XXXXX."
     }
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Une passkey vous connecte avec votre appareil (Touch ID, Face ID, Windows Hello, téléphone), sans mot de passe ni code. Elle vaut une double authentification.",
+    "unsupported": "Ce navigateur ne permet pas d’utiliser les passkeys.",
+    "loading": "Chargement des passkeys…",
+    "error": "Impossible de charger vos passkeys.",
+    "empty": "Aucune passkey pour l’instant.",
+    "unnamed": "Passkey sans nom",
+    "synced": "Synchronisée entre vos appareils",
+    "thisDevice": "Sur cet appareil seulement",
+    "addedOn": "ajoutée le {{date}}",
+    "remove": "Supprimer",
+    "removeNamed": "Supprimer la passkey {{name}}",
+    "nameLabel": "Nom de la passkey (facultatif)",
+    "nameHint": "Pour la reconnaître plus tard, par exemple « MacBook » ou « Téléphone ».",
+    "add": "Ajouter une passkey",
+    "adding": "En attente de votre appareil…",
+    "added": "Passkey ajoutée. Un courriel de confirmation vous a été envoyé.",
+    "removed": "Passkey supprimée. Un courriel de confirmation vous a été envoyé.",
+    "signInAgain": "Se reconnecter",
+    "signIn": "Se connecter avec une passkey"
   }
 }

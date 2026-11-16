@@ -33,11 +33,13 @@ test('turn on two-factor authentication, then sign in with the app code', async 
   await page.goto('/login');
   await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
   await page.getByLabel('Mot de passe').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
   await expect(page).toHaveURL(/\/posts$/);
 
   await page.getByRole('link', { name: 'Sécurité' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Sécurité du compte' })).toBeVisible();
+  // The passkeys section is there too (Chromium supports WebAuthn), checked by axe below.
+  await expect(page.getByText('Aucune passkey pour l’instant.')).toBeVisible();
   await expectNoAccessibilityViolations(page);
 
   await page.getByRole('button', { name: 'Activer la double authentification' }).click();
@@ -62,7 +64,7 @@ test('turn on two-factor authentication, then sign in with the app code', async 
   // Sign in again: the password alone is not enough any more.
   await page.getByLabel('Adresse courriel').fill('amelie@agence.ca');
   await page.getByLabel('Mot de passe').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Vérification en deux étapes' })).toBeFocused();
   await expectNoAccessibilityViolations(page);
 

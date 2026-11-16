@@ -13,6 +13,7 @@
     "seed-user": "node --env-file-if-exists=.env dist/scripts/seed-demo-user.js"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.7.15",
     "@better-auth/prisma-adapter": "1.7.15",
     "@nestjs/common": "12.4.0",
     "@nestjs/core": "12.4.0",

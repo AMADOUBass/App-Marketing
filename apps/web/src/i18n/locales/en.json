@@ -70,7 +70,11 @@
       "invalidToken": "This link is invalid or has expired.",
       "invalidPassword": "Incorrect password.",
       "invalidCode": "Incorrect code. Check the time on your phone and try again.",
-      "codeExpired": "The check has expired or there were too many attempts. Sign in again with your password."
+      "codeExpired": "The check has expired or there were too many attempts. Sign in again with your password.",
+      "sessionNotFresh": "For security, adding a passkey needs a recent sign-in. Sign in again, then try once more.",
+      "userVerificationRequired": "Your device must verify it is you (PIN, fingerprint or face). Turn on a screen lock on the device, then try again.",
+      "passkeyFailed": "The passkey could not be verified. Try again or use your password.",
+      "passkeyCancelled": "Cancelled."
     }
   },
   "signup": {
@@ -218,5 +222,27 @@
       "codeFormat": "The code has 6 digits.",
       "backupFormat": "A backup code looks like XXXXX-XXXXX."
     }
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "A passkey signs you in with your device (Touch ID, Face ID, Windows Hello, phone), with no password or code. It counts as two-factor authentication.",
+    "unsupported": "This browser cannot use passkeys.",
+    "loading": "Loading passkeys…",
+    "error": "Could not load your passkeys.",
+    "empty": "No passkey yet.",
+    "unnamed": "Unnamed passkey",
+    "synced": "Synced across your devices",
+    "thisDevice": "On this device only",
+    "addedOn": "added on {{date}}",
+    "remove": "Remove",
+    "removeNamed": "Remove the passkey {{name}}",
+    "nameLabel": "Passkey name (optional)",
+    "nameHint": "To recognize it later, for example “MacBook” or “Phone”.",
+    "add": "Add a passkey",
+    "adding": "Waiting for your device…",
+    "added": "Passkey added. A confirmation email was sent to you.",
+    "removed": "Passkey removed. A confirmation email was sent to you.",
+    "signInAgain": "Sign in again",
+    "signIn": "Sign in with a passkey"
   }
 }
