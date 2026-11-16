@@ -8,6 +8,7 @@ import type {
   PublishOutcomeState,
   PublishResult,
   PublishTarget,
+  PrecheckResult,
   ReconcileResult,
 } from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
@@ -21,6 +22,10 @@ let a: Fixture;
 class SlowHandler implements PublishHandler {
   reconcile(): Promise<ReconcileResult> {
     return Promise.resolve({ outcome: 'unknown' });
+  }
+
+  precheck(): Promise<PrecheckResult> {
+    return Promise.resolve({ outcome: 'ok' });
   }
 
   readonly calls: PublishTarget[] = [];
@@ -144,6 +149,7 @@ describe('a publication never disappears (rule 6)', () => {
     let release: (outcome: PublishOutcomeState) => void = () => undefined;
     const blocked: PublishHandler = {
       reconcile: () => Promise.resolve({ outcome: 'unknown' }),
+      precheck: () => Promise.resolve({ outcome: 'ok' }),
       publish: () =>
         new Promise<PublishResult>((resolve) => {
           release = (state) => {

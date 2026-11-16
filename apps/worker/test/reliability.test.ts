@@ -2,8 +2,10 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EventsProcessor } from '../src/events/events.processor.js';
 import type {
+  PrecheckResult,
   PublishHandler,
   PublishResult,
+  PublishTarget,
   ReconcileResult,
 } from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
@@ -16,14 +18,23 @@ class ScriptedHandler implements PublishHandler {
   reconciles: ReconcileResult[] = [{ outcome: 'unknown' }];
   publishCalls = 0;
   reconcileCalls = 0;
+  /** Every target asked about (other tests leave unknown outcomes the scheduler also picks up). */
+  readonly reconciledTargets: string[] = [];
+  readonly publishedTargets: string[] = [];
 
-  publish(): Promise<PublishResult> {
+  publish(target: PublishTarget): Promise<PublishResult> {
+    this.publishedTargets.push(target.targetId);
     const result = this.publishes[Math.min(this.publishCalls, this.publishes.length - 1)];
     this.publishCalls += 1;
     return Promise.resolve(result ?? { state: 'published' });
   }
 
-  reconcile(): Promise<ReconcileResult> {
+  precheck(): Promise<PrecheckResult> {
+    return Promise.resolve({ outcome: 'ok' });
+  }
+
+  reconcile(target: PublishTarget): Promise<ReconcileResult> {
+    this.reconciledTargets.push(target.targetId);
     const result = this.reconciles[Math.min(this.reconcileCalls, this.reconciles.length - 1)];
     this.reconcileCalls += 1;
     return Promise.resolve(result ?? { outcome: 'unknown' });
@@ -279,7 +290,7 @@ describe('end to end, with the scheduler and the outbox relay', () => {
 
       const stored = await row(a, id);
       expect(stored.attemptCount).toBe(2);
-      expect(e2eHandler.publishCalls).toBe(2);
+      expect(e2eHandler.publishedTargets.filter((target) => target === id)).toHaveLength(2);
       const events = worker.get(EventsProcessor);
       await waitFor(
         () =>
@@ -305,8 +316,8 @@ describe('end to end, with the scheduler and the outbox relay', () => {
 
       await waitFor(async () => (await row(b, id)).state === 'published', 15_000);
 
-      expect(e2eHandler.publishCalls).toBe(0);
-      expect(e2eHandler.reconcileCalls).toBe(1);
+      expect(e2eHandler.publishedTargets).not.toContain(id);
+      expect(e2eHandler.reconciledTargets.filter((target) => target === id)).toHaveLength(1);
     } finally {
       await worker.close();
     }

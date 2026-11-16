@@ -4,11 +4,14 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import type { Db, DispatchItem, ReconcileItem } from '@ponctua/db';
+import type { Db, DispatchItem, PrecheckItem, ReconcileItem } from '@ponctua/db';
 import type { Queue } from 'bullmq';
 import type { Logger } from 'pino';
 import {
   type EventJobData,
+  PRECHECK_QUEUE,
+  type PrecheckJobData,
+  precheckJobId,
   PUBLISH_QUEUE,
   type PublishJobData,
   publishJobId,
@@ -20,6 +23,7 @@ import {
   DB,
   EVENTS_QUEUE_CLIENT,
   LOGGER,
+  PRECHECK_QUEUE_CLIENT,
   PUBLISH_QUEUE_CLIENT,
   RECONCILE_QUEUE_CLIENT,
 } from '../common/tokens.js';
@@ -48,6 +52,7 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
     @Inject(PUBLISH_QUEUE_CLIENT) private readonly queue: Queue<PublishJobData>,
     @Inject(RECONCILE_QUEUE_CLIENT) private readonly reconcileQueue: Queue<ReconcileJobData>,
     @Inject(EVENTS_QUEUE_CLIENT) private readonly eventsQueue: Queue<EventJobData>,
+    @Inject(PRECHECK_QUEUE_CLIENT) private readonly precheckQueue: Queue<PrecheckJobData>,
     private readonly lock: LeaderLock,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
@@ -111,6 +116,13 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
         limit: this.env.SCHEDULER_BATCH_SIZE,
       });
 
+      // 15 minutes before: token, permissions, quota and media checked while there is time to fix them.
+      const prechecks = await this.db.scheduler.claimDuePrechecks({
+        leadSeconds: this.env.PRECHECK_LEAD_SECONDS,
+        limit: this.env.SCHEDULER_BATCH_SIZE,
+      });
+
+      await this.enqueuePrechecks(prechecks);
       await this.enqueue([...due, ...stale, ...retries]);
       await this.enqueueReconciliations(reconciliations);
       const events = await this.relayOutbox();
@@ -148,6 +160,25 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
       })),
     );
     this.logger.info({ count: items.length }, 'targets handed to the publish queue');
+  }
+
+  private async enqueuePrechecks(items: PrecheckItem[]): Promise<void> {
+    if (items.length === 0) return;
+    await this.precheckQueue.addBulk(
+      items.map((item) => ({
+        name: PRECHECK_QUEUE,
+        data: {
+          organizationId: item.organizationId,
+          targetId: item.targetId,
+          scheduledAt: item.scheduledAt.getTime(),
+        },
+        opts: {
+          jobId: precheckJobId(item.targetId, item.scheduledAt.getTime()),
+          removeOnComplete: true,
+          removeOnFail: { age: 7 * 86_400 },
+        },
+      })),
+    );
   }
 
   private async enqueueReconciliations(items: ReconcileItem[]): Promise<void> {

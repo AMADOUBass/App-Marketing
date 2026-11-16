@@ -14,6 +14,7 @@ import { Redis } from 'ioredis';
 import { type DestinationStream, type Logger, pino } from 'pino';
 import {
   EVENTS_QUEUE,
+  PRECHECK_QUEUE,
   PUBLISH_QUEUE,
   type PublishJobData,
   RECONCILE_QUEUE,
@@ -22,10 +23,13 @@ import {
   DB,
   EVENTS_QUEUE_CLIENT,
   LOGGER,
+  PRECHECK_QUEUE_CLIENT,
   PUBLISH_QUEUE_CLIENT,
+  RATE_LIMITER,
   RECONCILE_QUEUE_CLIENT,
   VALKEY,
 } from './common/tokens.js';
+import { RateLimiter } from './common/rate-limiter.js';
 import { ENV, type Env } from './config/env.js';
 import { EventsProcessor } from './events/events.processor.js';
 import { InstagramPublishHandler } from './publish/instagram-publish.handler.js';
@@ -35,6 +39,7 @@ import {
   type PublishHandler,
   RoutingPublishHandler,
 } from './publish/publish-handler.js';
+import { PrecheckProcessor } from './publish/precheck.processor.js';
 import { PublishProcessor } from './publish/publish.processor.js';
 import { ReconcileProcessor } from './publish/reconcile.processor.js';
 import { LeaderLock } from './scheduler/leader-lock.js';
@@ -81,10 +86,16 @@ class QueueLifecycle implements OnApplicationShutdown {
     @Inject(PUBLISH_QUEUE_CLIENT) private readonly publish: Queue,
     @Inject(RECONCILE_QUEUE_CLIENT) private readonly reconcile: Queue,
     @Inject(EVENTS_QUEUE_CLIENT) private readonly events: Queue,
+    @Inject(PRECHECK_QUEUE_CLIENT) private readonly precheck: Queue,
   ) {}
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.all([this.publish.close(), this.reconcile.close(), this.events.close()]);
+    await Promise.all([
+      this.publish.close(),
+      this.reconcile.close(),
+      this.events.close(),
+      this.precheck.close(),
+    ]);
   }
 }
 
@@ -134,6 +145,12 @@ export class WorkerModule {
             }),
         },
         {
+          provide: PRECHECK_QUEUE_CLIENT,
+          inject: [VALKEY],
+          useFactory: (valkey: Redis) =>
+            new Queue(PRECHECK_QUEUE, { connection: valkey.duplicate(), prefix: env.QUEUE_PREFIX }),
+        },
+        {
           provide: EVENTS_QUEUE_CLIENT,
           inject: [VALKEY],
           useFactory: (valkey: Redis) =>
@@ -158,8 +175,14 @@ export class WorkerModule {
           useFactory: (db: Db) =>
             options.publishHandler ?? createPublishHandler(env, db, options.graphFetch),
         },
+        {
+          provide: RATE_LIMITER,
+          inject: [VALKEY],
+          useFactory: (valkey: Redis) => new RateLimiter(valkey, env.QUEUE_PREFIX),
+        },
         PublishProcessor,
         ReconcileProcessor,
+        PrecheckProcessor,
         EventsProcessor,
       );
     }

@@ -291,7 +291,16 @@
       "outcome.unknown": "Nous vérifions auprès de la plateforme si la publication est partie.",
       "outcome.not_sent": "La publication n’était pas partie : un nouvel essai est prévu.",
       "outcome.confirmed": "Publication confirmée par la plateforme après vérification.",
-      "outcome.unconfirmed": "Impossible de confirmer si la publication est partie : vérifiez sur le compte avant de reprogrammer."
+      "outcome.unconfirmed": "Impossible de confirmer si la publication est partie : vérifiez sur le compte avant de reprogrammer.",
+      "platform.rate_limited": "Limite de publication du compte atteinte : départ dès qu’elle se libère.",
+      "quota.exhausted": "Quota de publication presque épuisé sur la plateforme : la publication attendra si besoin.",
+      "account.permissions": "Il manque une autorisation au compte : reconnectez-le.",
+      "image.format": "Format d’image refusé par la plateforme (Instagram : JPEG seulement).",
+      "image.url_invalid": "L’adresse de l’image n’est pas valide.",
+      "image.url_not_https": "L’image doit être en HTTPS.",
+      "image.url_not_public": "L’image doit être accessible publiquement.",
+      "image.too_large": "L’image est trop lourde pour la plateforme.",
+      "image.aspect_ratio": "Les proportions de l’image ne conviennent pas à la plateforme."
     }
   }
 }

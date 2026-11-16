@@ -302,7 +302,7 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 
 - [x] 4a. API de programmation (`POST /posts`, `/posts/:id/schedule`, annulation, états) avec `Idempotency-Key` (table `idempotency_keys`, rejeu, 422 si réutilisée) ; états visibles sur la liste des posts (ADR 012)
 - [x] 4b-1. Reprises (backoff exponentiel + gigue, transient/quota seulement), réconciliation des `unknown_outcome` (jamais republié à l'aveugle), outbox transactionnelle + relais, raisons affichées (ADR 013)
-- [ ] 4b-2. Contrôle 15 min avant l'heure, limiteur Valkey à 3 niveaux (ADR 013)
+- [x] 4b-2. Contrôle 15 min avant l'heure (jeton, permissions, média, quota → `needs_action` à temps), limiteur Valkey (seaux à jetons Lua atomiques, valeurs du registre, attente sans consommer de tentative) (ADR 013)
 - [ ] 4c. Adaptateur Facebook (Pages) (ADR 014)
 - [ ] 4d. Adaptateur Threads + rafraîchissement des jetons (ADR 015)
 

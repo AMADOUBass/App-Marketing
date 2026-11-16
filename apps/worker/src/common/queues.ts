@@ -38,3 +38,17 @@ export interface EventJobData {
   type: string;
   payload: unknown;
 }
+
+export const PRECHECK_QUEUE = 'precheck';
+
+/** The 15-minute pre-check of one target (ADR 013). */
+export interface PrecheckJobData {
+  organizationId: string;
+  targetId: string;
+  /** The time it was scheduled for when claimed: a rescheduled target is checked again, not by this job. */
+  scheduledAt: number;
+}
+
+export function precheckJobId(targetId: string, scheduledAt: number): string {
+  return `${targetId}_pc${String(scheduledAt)}`;
+}

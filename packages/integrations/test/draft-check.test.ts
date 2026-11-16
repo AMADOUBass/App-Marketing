@@ -28,3 +28,13 @@ describe('checking a draft before scheduling', () => {
     }
   });
 });
+
+describe('rate limit rules come from the capability registry', () => {
+  it('Instagram: the stricter documented daily publishing limit, per account', async () => {
+    const { rateLimitRules } = await import('../src/index.js');
+    expect(rateLimitRules('instagram')).toEqual([
+      { scope: 'account', capacity: 50, windowSeconds: 86_400 },
+    ]);
+    expect(rateLimitRules('linkedin')).toEqual([]);
+  });
+});

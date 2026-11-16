@@ -1,6 +1,10 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { PublishHandler, ReconcileResult } from '../src/publish/publish-handler.js';
+import type {
+  PrecheckResult,
+  PublishHandler,
+  ReconcileResult,
+} from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
 import {
   createSeeder,
@@ -20,6 +24,10 @@ let b: Fixture;
 class SwitchableHandler implements PublishHandler {
   reconcile(): Promise<ReconcileResult> {
     return Promise.resolve({ outcome: 'unknown' });
+  }
+
+  precheck(): Promise<PrecheckResult> {
+    return Promise.resolve({ outcome: 'ok' });
   }
 
   current: PublishHandler = new RecordingHandler();
@@ -108,6 +116,7 @@ describe('outcomes', () => {
     switchable.current = {
       publish: () => Promise.reject(new Error('socket hang up after upload')),
       reconcile: () => Promise.resolve({ outcome: 'unknown' }),
+      precheck: () => Promise.resolve({ outcome: 'ok' }),
     };
     const target = await queuedTarget(a);
 

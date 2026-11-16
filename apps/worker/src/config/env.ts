@@ -47,6 +47,10 @@ export const envSchema = z
     RECONCILE_MAX_CHECKS: int(1, 50).default(5),
     /** A reconciliation job that has not answered within this lease is started again. */
     RECONCILE_LEASE_SECONDS: int(1, 86_400).default(300),
+    /** How long before the scheduled time the pre-check runs (token, permissions, quota, media). */
+    PRECHECK_LEAD_SECONDS: int(0, 86_400).default(900),
+    /** Local token buckets from the capability registry (ADR 013). Off only in specific tests. */
+    RATE_LIMITS_ENABLED: z.stringbool().default(true),
     /** A relayed outbox event not confirmed within this lease is relayed again (same job id). */
     OUTBOX_LEASE_SECONDS: int(1, 3600).default(60),
     /** Feature flag: real Instagram publishing. Off -> targets end in needs_action, nothing is sent. */

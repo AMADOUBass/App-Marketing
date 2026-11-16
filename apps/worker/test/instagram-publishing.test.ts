@@ -4,6 +4,7 @@ import { Secret } from '@ponctua/vault';
 import { createVaultSealer } from '@ponctua/vault/seal';
 import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { PrecheckProcessor } from '../src/publish/precheck.processor.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
 import { ReconcileProcessor } from '../src/publish/reconcile.processor.js';
 import { createSeeder, createTestEnv, type Fixture, startWorker } from './helpers.js';
@@ -317,5 +318,98 @@ describe('Instagram reconciliation of unknown outcomes (ADR 013)', () => {
       'retrying',
     );
     expect(graph.calls).toEqual([]);
+  });
+});
+
+describe('Instagram 15-minute pre-check (ADR 013)', () => {
+  async function prechecker(graph: ReturnType<typeof fakeGraph>) {
+    const env = createTestEnv('publish', {
+      INSTAGRAM_PUBLISHING_ENABLED: 'true',
+      VAULT_MASTER_PRIVATE_KEYS: `${master.id}:${master.privateKey}`,
+    });
+    const app = await startWorker(env, undefined, { graphFetch: graph.fetchImpl });
+    running.push(app);
+    return app.get(PrecheckProcessor);
+  }
+
+  /** A target scheduled in 10 minutes (what the scheduler hands to the pre-check). */
+  async function scheduledTarget(options: Parameters<typeof instagramTarget>[0] = {}) {
+    const { targetId } = await instagramTarget(options);
+    const scheduledAt = new Date(Date.now() + 10 * 60 * 1000);
+    await seed.db.withTenant(a.orgId, (tx) =>
+      tx.publicationTarget.update({
+        where: { id: targetId },
+        data: { state: 'scheduled', scheduledAt, queuedAt: null, attemptCount: 0 },
+      }),
+    );
+    return {
+      targetId,
+      job: { organizationId: a.orgId, targetId, scheduledAt: scheduledAt.getTime() },
+    };
+  }
+
+  const reasonOf = (targetId: string) =>
+    seed.db.withTenant(a.orgId, (tx) =>
+      tx.publicationTarget.findUniqueOrThrow({ where: { id: targetId } }),
+    );
+
+  it('all good: stays scheduled; only the quota was asked (nothing published)', async () => {
+    const graph = fakeGraph();
+    const { targetId, job } = await scheduledTarget();
+
+    expect(await (await prechecker(graph)).process(job)).toBe('ok');
+    expect(graph.calls.map((c) => c.step)).toEqual(['quota']);
+    expect((await reasonOf(targetId)).state).toBe('scheduled');
+  });
+
+  it('no sealed token -> needs_action now (account.not_connected), without calling Instagram', async () => {
+    const graph = fakeGraph();
+    const { targetId, job } = await scheduledTarget({ connected: false });
+
+    expect(await (await prechecker(graph)).process(job)).toBe('blocked');
+    expect(graph.calls).toEqual([]);
+    expect(await reasonOf(targetId)).toMatchObject({
+      state: 'needs_action',
+      statusReason: 'account.not_connected',
+    });
+  });
+
+  it('an image Instagram does not take (PNG) -> needs_action now (image.format)', async () => {
+    const { targetId, job } = await scheduledTarget({
+      imageUrl: 'https://media.example.com/croissant.png',
+    });
+
+    expect(await (await prechecker(fakeGraph())).process(job)).toBe('blocked');
+    expect((await reasonOf(targetId)).statusReason).toBe('image.format');
+  });
+
+  it('quota used up -> stays scheduled with a warning (the publish will wait and retry)', async () => {
+    const graph = fakeGraph({
+      quota: {
+        json: { data: [{ quota_usage: 50, config: { quota_total: 50, quota_duration: 86400 } }] },
+      },
+    });
+    const { targetId, job } = await scheduledTarget();
+
+    expect(await (await prechecker(graph)).process(job)).toBe('warning');
+    expect(await reasonOf(targetId)).toMatchObject({
+      state: 'scheduled',
+      statusReason: 'quota.exhausted',
+    });
+  });
+
+  it('an invalid token (190) on the quota call -> needs_action now (account.reconnect)', async () => {
+    const graph = fakeGraph({
+      quota: {
+        status: 400,
+        json: {
+          error: { message: 'Invalid OAuth access token', type: 'OAuthException', code: 190 },
+        },
+      },
+    });
+    const { targetId, job } = await scheduledTarget();
+
+    expect(await (await prechecker(graph)).process(job)).toBe('blocked');
+    expect((await reasonOf(targetId)).statusReason).toBe('account.reconnect');
   });
 });

@@ -291,7 +291,16 @@
       "outcome.unknown": "We are checking with the platform whether it went out.",
       "outcome.not_sent": "It had not gone out: another attempt is planned.",
       "outcome.confirmed": "Publication confirmed by the platform after a check.",
-      "outcome.unconfirmed": "We could not confirm whether it went out: check the account before rescheduling."
+      "outcome.unconfirmed": "We could not confirm whether it went out: check the account before rescheduling.",
+      "platform.rate_limited": "Account publishing limit reached: it goes as soon as a slot frees up.",
+      "quota.exhausted": "Publishing quota nearly used on the platform: it will wait if needed.",
+      "account.permissions": "The account is missing a permission: reconnect it.",
+      "image.format": "Image format refused by the platform (Instagram: JPEG only).",
+      "image.url_invalid": "The image address is not valid.",
+      "image.url_not_https": "The image must be served over HTTPS.",
+      "image.url_not_public": "The image must be publicly reachable.",
+      "image.too_large": "The image is too large for the platform.",
+      "image.aspect_ratio": "The image proportions do not suit the platform."
     }
   }
 }

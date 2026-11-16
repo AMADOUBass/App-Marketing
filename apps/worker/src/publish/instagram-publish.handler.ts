@@ -1,8 +1,13 @@
 import type { Db } from '@ponctua/db';
-import type { PlatformAdapter, PublishOutcome } from '@ponctua/integrations';
+import {
+  instagramCapabilities,
+  type PlatformAdapter,
+  type PublishOutcome,
+} from '@ponctua/integrations';
 import type { VaultOpener } from '@ponctua/vault/open';
 import type {
   AttemptData,
+  PrecheckResult,
   PublishHandler,
   PublishHooks,
   PublishResult,
@@ -113,6 +118,72 @@ export class InstagramPublishHandler implements PublishHandler {
       { onContainerCreated: (containerId) => hooks.recordProgress({ containerId }) },
     );
     return toPublishResult(outcome);
+  }
+
+  /**
+   * 15 minutes before (ADR 013): token present, not expiring before the time, permissions granted,
+   * image valid for Instagram, publishing quota left. Reads only; the quota is the one network call.
+   */
+  async precheck(target: PublishTarget): Promise<PrecheckResult> {
+    const context = await this.db.withTenant(target.organizationId, async (tx) => ({
+      post: await tx.post.findUniqueOrThrow({
+        where: { id: target.postId },
+        select: { body: true, imageUrl: true },
+      }),
+      account: await tx.socialAccount.findUniqueOrThrow({
+        where: { id: target.socialAccountId },
+        select: { externalAccountId: true },
+      }),
+      scheduledAt: (
+        await tx.publicationTarget.findUniqueOrThrow({
+          where: { id: target.targetId },
+          select: { scheduledAt: true },
+        })
+      ).scheduledAt,
+      credential: await this.opener.loadCredential(tx, {
+        organizationId: target.organizationId,
+        socialAccountId: target.socialAccountId,
+      }),
+    }));
+
+    const { credential } = context;
+    if (!credential) return { outcome: 'blocked', reason: 'account.not_connected' };
+    const at = context.scheduledAt ?? new Date();
+    if (credential.expiresAt && credential.expiresAt.getTime() <= at.getTime()) {
+      return { outcome: 'blocked', reason: 'account.reconnect' };
+    }
+    // Unified Login tokens may carry no scope list: checked only when the platform reported one.
+    const required = instagramCapabilities.permissions.value;
+    if (
+      credential.scopes.length > 0 &&
+      !required.every((permission) => credential.scopes.includes(permission))
+    ) {
+      return { outcome: 'blocked', reason: 'account.permissions' };
+    }
+    if (!context.post.imageUrl) return { outcome: 'blocked', reason: 'media.required' };
+    const [issue] = this.adapter.validate(
+      {
+        caption: context.post.body,
+        imageUrl: context.post.imageUrl,
+        mimeType: mimeTypeOf(context.post.imageUrl),
+      },
+      this.adapter.capabilities(),
+    );
+    if (issue) return { outcome: 'blocked', reason: issue.code };
+
+    try {
+      const quota = await this.adapter.publishingQuota(
+        context.account.externalAccountId,
+        credential.tokens.accessToken,
+      );
+      return quota.used >= quota.total
+        ? { outcome: 'warning', reason: 'quota.exhausted' }
+        : { outcome: 'ok' };
+    } catch (error) {
+      return this.adapter.classifyError(error) === 'auth'
+        ? { outcome: 'blocked', reason: 'account.reconnect' }
+        : { outcome: 'unknown' };
+    }
   }
 
   /**

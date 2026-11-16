@@ -47,6 +47,18 @@ export type ReconcileResult =
     }
   | { outcome: 'unknown' };
 
+/**
+ * The 15-minute pre-check (CLAUDE.md section 5, ADR 013): what would make the publication fail, found
+ * while there is still time to fix it. 'blocked' moves the target to needs_action now; 'warning' keeps
+ * it scheduled with a reason (e.g. quota nearly used: the publish will wait and retry); 'unknown' (the
+ * platform did not answer) changes nothing.
+ */
+export type PrecheckResult =
+  | { outcome: 'ok' }
+  | { outcome: 'blocked'; reason: string }
+  | { outcome: 'warning'; reason: string }
+  | { outcome: 'unknown' };
+
 export interface PublishHooks {
   /** Stores progress on the attempt row right away (e.g. the container id, before the risky call). */
   recordProgress(data: AttemptData): Promise<void>;
@@ -59,6 +71,8 @@ export interface PublishHandler {
    * `attempt` is what the attempt row recorded (e.g. the container id), null if nothing was.
    */
   reconcile(target: PublishTarget, attempt: AttemptData | null): Promise<ReconcileResult>;
+  /** Checks token, permissions, quota and media before the scheduled time. Never publishes. */
+  precheck(target: PublishTarget): Promise<PrecheckResult>;
 }
 
 export const PUBLISH_HANDLER = Symbol('PUBLISH_HANDLER');
@@ -76,6 +90,10 @@ export class NoAdapterPublishHandler implements PublishHandler {
   reconcile(): Promise<ReconcileResult> {
     return Promise.resolve({ outcome: 'unknown' });
   }
+
+  precheck(): Promise<PrecheckResult> {
+    return Promise.resolve({ outcome: 'blocked', reason: 'platform.unavailable' });
+  }
 }
 
 /** Sends each target to its platform's handler; platforms without one fall back to needs_action. */
@@ -90,5 +108,9 @@ export class RoutingPublishHandler implements PublishHandler {
 
   reconcile(target: PublishTarget, attempt: AttemptData | null): Promise<ReconcileResult> {
     return (this.handlers[target.platform] ?? this.fallback).reconcile(target, attempt);
+  }
+
+  precheck(target: PublishTarget): Promise<PrecheckResult> {
+    return (this.handlers[target.platform] ?? this.fallback).precheck(target);
   }
 }

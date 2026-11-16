@@ -46,6 +46,17 @@ export const instagramCapabilities = {
     { documentedValues: [50, 100], useLiveValue: true },
     'instagram-graph-api/reference/ig-user/content_publishing_limit',
   ),
+  /**
+   * Local rate limits applied by the worker before calling Instagram (ADR 013). Only documented
+   * numbers: per account, the publishing limit over a rolling 24 h. The docs give 50 or 100; the
+   * lower one is used, so the limiter never lets through more than the stricter reading allows (the
+   * live content_publishing_limit is still checked before publishing). No app-wide number is
+   * documented for content publishing: no app-level bucket.
+   */
+  rateLimits: fact(
+    [{ scope: 'account', capacity: 50, windowSeconds: 24 * 60 * 60 }] as const,
+    'instagram-graph-api/reference/ig-user/content_publishing_limit',
+  ),
   /** Least privilege: no ads permissions (ads management is out of scope, CLAUDE.md section 1). */
   permissions: fact(
     ['instagram_basic', 'instagram_content_publish'],

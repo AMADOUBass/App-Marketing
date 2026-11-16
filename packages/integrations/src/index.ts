@@ -17,6 +17,7 @@ export {
   type PostDraft,
   PUBLISHABLE_PLATFORMS,
 } from './core/draft-check.js';
+export { type RateLimitRule, rateLimitRules } from './core/rate-limits.js';
 export { createInstagramAdapter, type InstagramAdapterOptions } from './instagram/adapter.js';
 export { classifyInstagramError } from './instagram/errors.js';
 export {

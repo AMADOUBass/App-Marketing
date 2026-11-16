@@ -1,7 +1,6 @@
 # ADR 013 — Fiabilité du moteur de publication : reprises, réconciliation, outbox
 
-- Statut : accepté (4b-1). Le contrôle 15 minutes avant l'heure et le limiteur Valkey (4b-2) complètent
-  cet ADR.
+- Statut : accepté (4b-1 reprises, réconciliation et outbox ; 4b-2 contrôle préalable et limiteur)
 - Date : 2026-11-16
 - Tâche : MVP, moteur de publication, étape 4b
 
@@ -76,6 +75,32 @@ fin d'une publication. CLAUDE.md (section 5) demande :
 6. **Raison affichée.** `status_reason` est un code (`platform.transient`, `account.reconnect`,
    `retries.exhausted`…). L'API l'expose avec `retryAt`, et le web le traduit (FR/EN), avec un texte
    générique pour un code inconnu.
+
+7. **Contrôle 15 minutes avant l'heure** (4b-2, file `precheck`). `claim_due_prechecks()` marque une
+   cible programmée dans les `PRECHECK_LEAD_SECONDS` (900 s) une seule fois (`prechecked_at`), et une
+   reprogrammation le relance. Le gestionnaire de la plateforme vérifie le jeton (présent, pas expiré avant
+   l'heure), les permissions (si la plateforme en a donné la liste), le média (règles du registre) et le
+   quota restant (lu sur la plateforme ; c'est le seul appel réseau, et il ne publie rien).
+   - **Bloquant** (`account.not_connected`, `account.reconnect`, `account.permissions`,
+     `media.required`, `image.format`…) → `needs_action` **tout de suite**, avec un événement, pendant
+     qu'il est encore temps de corriger.
+   - **Avertissement** (`quota.exhausted`) → la cible reste programmée, avec la raison. La publication
+     attendra et réessaiera comme une erreur de quota.
+   - **Pas de réponse** → rien ne change ; la publication fera ses propres vérifications.
+   - Une tâche d'un horaire périmé (cible reprogrammée) ne fait rien.
+8. **Limiteur Valkey** (4b-2). Ce sont des seaux à jetons pris **atomiquement** par un script Lua avec
+   l'horloge de Valkey (`TIME`) : soit tous les niveaux ont un jeton et on en prend un à chacun, soit on
+   n'en prend aucun et le script renvoie l'attente du plus lent.
+   - Niveaux : `app` (partagé par la plateforme) et `account` (par compte social), chacun avec sa
+     fenêtre, ce qui couvre le quota du jour. Les valeurs viennent du **registre de capacités**
+     (`rateLimitRules()`, règle 7) et sont sourcées : pour Instagram, 50 publications par compte sur
+     24 h glissantes, soit la plus stricte des deux valeurs documentées (50 et 100).
+   - Aucun nombre n'est inventé : la doc ne donne pas de limite au niveau de l'application pour la
+     publication Instagram, donc pas de seau `app`.
+   - Le contrôle a lieu **avant** le passage en `publishing`. Une cible limitée reste `queued` avec le
+     même numéro de tentative, sa tâche est retardée du temps demandé (`moveToDelayed`), et la raison
+     `platform.rate_limited` s'affiche. Aucune tentative n'est consommée.
+   - `RATE_LIMITS_ENABLED` (vrai par défaut) existe seulement pour les tests qui en ont besoin.
 
 ## Conséquences
 

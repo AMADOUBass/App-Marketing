@@ -9,6 +9,7 @@ import type {
   PublishOutcomeState,
   PublishResult,
   PublishTarget,
+  PrecheckResult,
   ReconcileResult,
 } from '../src/publish/publish-handler.js';
 import { WorkerModule, type WorkerModuleOptions } from '../src/worker.module.js';
@@ -45,6 +46,10 @@ export async function startWorker(
 export class RecordingHandler implements PublishHandler {
   reconcile(): Promise<ReconcileResult> {
     return Promise.resolve({ outcome: 'unknown' });
+  }
+
+  precheck(): Promise<PrecheckResult> {
+    return Promise.resolve({ outcome: 'ok' });
   }
 
   readonly calls: { target: PublishTarget; at: number }[] = [];

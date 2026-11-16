@@ -18,6 +18,8 @@ export const TARGETS_QUERY_KEY = 'publication-targets';
 
 /** States whose reason helps the user (what went wrong, or why it waits). */
 const SHOW_REASON: readonly PublicationStateDto[] = [
+  'scheduled',
+  'queued',
   'retrying',
   'failed',
   'needs_action',

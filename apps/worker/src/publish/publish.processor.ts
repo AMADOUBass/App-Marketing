@@ -5,13 +5,14 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import type { Db, PublicationState } from '@ponctua/db';
-import { Worker } from 'bullmq';
+import { DelayedError, type Job, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { RETRYABLE, retryDelaySeconds } from '../common/backoff.js';
 import { recordTargetEvent } from '../common/outbox.js';
+import type { RateLimiter } from '../common/rate-limiter.js';
 import { PUBLISH_QUEUE, type PublishJobData } from '../common/queues.js';
-import { DB, LOGGER, VALKEY } from '../common/tokens.js';
+import { DB, LOGGER, RATE_LIMITER, VALKEY } from '../common/tokens.js';
 import { ENV, type Env } from '../config/env.js';
 import {
   type AttemptData,
@@ -33,12 +34,13 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
     @Inject(VALKEY) private readonly valkey: Redis,
     @Inject(PUBLISH_HANDLER) private readonly handler: PublishHandler,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(RATE_LIMITER) private readonly limiter: RateLimiter,
   ) {}
 
   onApplicationBootstrap(): void {
     this.worker = new Worker<PublishJobData, ProcessResult>(
       PUBLISH_QUEUE,
-      (job) => this.process(job.data),
+      (job, token) => this.run(job, token),
       {
         connection: this.valkey.duplicate({ maxRetriesPerRequest: null }),
         prefix: this.env.QUEUE_PREFIX,
@@ -52,6 +54,48 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
 
   async onApplicationShutdown(): Promise<void> {
     await this.worker?.close();
+  }
+
+  /**
+   * Rate limits first (ADR 013): over the platform's budget, the job is delayed in the queue for the
+   * time the bucket needs, without starting the attempt (the target stays queued, same attempt number).
+   */
+  private async run(
+    job: Job<PublishJobData, ProcessResult>,
+    token?: string,
+  ): Promise<ProcessResult> {
+    if (this.env.RATE_LIMITS_ENABLED) {
+      const waitMs = await this.admit(job.data);
+      if (waitMs > 0) {
+        await job.moveToDelayed(Date.now() + waitMs, token);
+        throw new DelayedError();
+      }
+    }
+    return this.process(job.data);
+  }
+
+  /** Takes a slot from the platform's buckets for this account. Returns how long to wait (0 = go). */
+  async admit(job: PublishJobData): Promise<number> {
+    const target = await this.db.withTenant(job.organizationId, (tx) =>
+      tx.publicationTarget.findFirst({
+        where: { id: job.targetId, state: 'queued', attemptCount: job.attemptNo },
+        select: { socialAccountId: true, socialAccount: { select: { platform: true } } },
+      }),
+    );
+    if (!target) return 0; // Not ours to run: process() will skip it.
+    const decision = await this.limiter.take(target.socialAccount.platform, target.socialAccountId);
+    if (decision.allowed) return 0;
+    await this.db.withTenant(job.organizationId, (tx) =>
+      tx.publicationTarget.updateMany({
+        where: { id: job.targetId, state: 'queued', attemptCount: job.attemptNo },
+        data: { statusReason: 'platform.rate_limited' },
+      }),
+    );
+    this.logger.info(
+      { targetId: job.targetId, waitMs: decision.retryAfterMs },
+      'rate limited: publish job delayed',
+    );
+    return decision.retryAfterMs;
   }
 
   /**
