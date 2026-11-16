@@ -2,6 +2,8 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@ponctua/contracts';
 import type { IdentityClient } from '@ponctua/db/identity';
 import { Logger } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
+import { createAuthMiddleware, isAPIError } from 'better-auth/api';
+import { twoFactor } from 'better-auth/plugins';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import type { Env } from '../../config/env.js';
 import { type AuthEmailKind, authEmail, languageOf } from './auth-emails.js';
@@ -18,6 +20,20 @@ export const CLIENT_IP_HEADER = 'x-ponctua-client-ip';
 export const SIGN_IN_LIMIT = 10;
 export const SIGN_UP_LIMIT = 5;
 export const EMAIL_SEND_LIMIT = 3;
+
+/** Shown in authenticator apps next to the account. */
+export const TOTP_ISSUER = 'Ponctua';
+/** "Trust this device" skips the code on this browser for 30 days. */
+export const TRUST_DEVICE_DAYS = 30;
+
+/**
+ * Security changes made from a signed-in session: the owner is told by email, in case the session
+ * was not theirs (ADR 010).
+ */
+const NOTIFIED_CHANGES: Record<string, AuthEmailKind> = {
+  '/change-password': 'passwordUpdated',
+  '/two-factor/disable': 'twoFactorDisabled',
+};
 
 /** Web pages the email links come back to (relative: same origin as BETTER_AUTH_URL). */
 export const EMAIL_VERIFIED_PATH = '/email-verified';
@@ -123,6 +139,25 @@ export function createAuth(env: Env, prisma: IdentityClient, mailer: Mailer) {
         if (level === 'error') logger.error(message);
         else logger.warn(message);
       },
+    },
+    plugins: [
+      // TOTP (authenticator app) + 10 one-time backup codes. The secret and the backup codes are
+      // stored encrypted with BETTER_AUTH_SECRET; enabling needs the password and a first valid code.
+      // Sign-in with a password then holds no session until the code is checked (ADR 010).
+      twoFactor({
+        issuer: TOTP_ISSUER,
+        trustDeviceMaxAge: TRUST_DEVICE_DAYS * 24 * 60 * 60,
+        backupCodeOptions: { amount: 10, storeBackupCodes: 'encrypted' },
+      }),
+    ],
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        const kind = NOTIFIED_CHANGES[ctx.path];
+        const user = ctx.context.session?.user;
+        if (!kind || !user || isAPIError(ctx.context.returned)) return;
+        void sendAuthEmail(kind, user.email, ctx.request);
+        return Promise.resolve();
+      }),
     },
     // No usage data sent to a third party.
     telemetry: { enabled: false },

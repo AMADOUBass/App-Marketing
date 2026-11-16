@@ -14,6 +14,8 @@ interface FakeUser {
   password: string;
   /** Address confirmed through the emailed link (required before signing in, ADR 009). */
   verified?: boolean;
+  /** Authenticator-app codes required after the password. */
+  twoFactor?: boolean;
   organizations: FakeOrganization[];
 }
 
@@ -27,6 +29,10 @@ const json = (route: Route, status: number, body: unknown) =>
 const problem = (status: number, title: string) => ({ type: 'about:blank', title, status });
 
 let ids = 0;
+/** The only code the fake authenticator accepts. */
+export const FAKE_TOTP_CODE = '123456';
+const FAKE_TOTP_URI = 'otpauth://totp/Ponctua:user?secret=JBSWY3DPEHPK3PXP&issuer=Ponctua';
+
 const nextId = () => `0195f000-0000-7000-8000-${String(++ids).padStart(12, '0')}`;
 
 /**
@@ -37,6 +43,8 @@ const nextId = () => `0195f000-0000-7000-8000-${String(++ids).padStart(12, '0')}
 export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] = []) {
   const accounts: FakeUser[] = users.map((user) => ({ ...user, id: nextId() }));
   let session: FakeUser | null = null;
+  /** Password checked, code still expected (Better Auth's short-lived 2FA cookie). */
+  let pendingTwoFactor: FakeUser | null = null;
   const organizationHeaders: string[] = [];
   /** Reset links "emailed" so far: token -> account. */
   const resetTokens = new Map<string, FakeUser>();
@@ -49,6 +57,10 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
       const user = accounts.find((u) => u.email === body.email && u.password === body.password);
       if (!user) return json(route, 401, { code: 'INVALID_EMAIL_OR_PASSWORD' });
       if (user.verified === false) return json(route, 403, { code: 'EMAIL_NOT_VERIFIED' });
+      if (user.twoFactor) {
+        pendingTwoFactor = user;
+        return json(route, 200, { twoFactorRedirect: true, twoFactorMethods: ['totp'] });
+      }
       session = user;
       return json(route, 200, { user: { id: user.id } });
     }
@@ -79,6 +91,32 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
       session = null;
       return json(route, 200, { status: true });
     }
+    if (path === '/api/auth/two-factor/enable') {
+      if (!session) return json(route, 401, problem(401, 'Unauthorized'));
+      if (body.password !== session.password) return json(route, 400, { code: 'INVALID_PASSWORD' });
+      return json(route, 200, {
+        totpURI: FAKE_TOTP_URI,
+        backupCodes: Array.from({ length: 10 }, (_, i) => `ABCD${String(i)}-EFGH${String(i)}`),
+      });
+    }
+    if (path === '/api/auth/two-factor/verify-totp') {
+      if (body.code !== FAKE_TOTP_CODE) return json(route, 401, { code: 'INVALID_CODE' });
+      if (pendingTwoFactor) {
+        session = pendingTwoFactor;
+        pendingTwoFactor = null;
+      } else if (session) {
+        session.twoFactor = true;
+      } else {
+        return json(route, 401, { code: 'INVALID_TWO_FACTOR_COOKIE' });
+      }
+      return json(route, 200, { token: null, user: { id: session.id } });
+    }
+    if (path === '/api/auth/two-factor/disable') {
+      if (!session) return json(route, 401, problem(401, 'Unauthorized'));
+      if (body.password !== session.password) return json(route, 400, { code: 'INVALID_PASSWORD' });
+      session.twoFactor = false;
+      return json(route, 200, { status: true });
+    }
     if (path === '/api/auth/sign-out') {
       session = null;
       return json(route, 200, { success: true });
@@ -94,7 +132,12 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
 
     if (path === '/api/v1/me') {
       return json(route, 200, {
-        user: { id: user.id, name: user.name, email: user.email },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          twoFactorEnabled: user.twoFactor === true,
+        },
         organizations: user.organizations.map(({ organizationId, name, role }) => ({
           organizationId,
           name,

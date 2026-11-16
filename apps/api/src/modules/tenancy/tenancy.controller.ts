@@ -26,7 +26,12 @@ export class TenancyController {
     const session = await this.auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
     if (!session) throw new UnauthorizedException('Authentication required');
     return {
-      user: { id: userId, name: session.user.name, email: session.user.email },
+      user: {
+        id: userId,
+        name: session.user.name,
+        email: session.user.email,
+        twoFactorEnabled: session.user.twoFactorEnabled === true,
+      },
       organizations: await this.db.directory.listOrganizations(userId),
     };
   }

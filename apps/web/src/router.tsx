@@ -20,6 +20,7 @@ import { NewOrganizationPage } from './pages/new-organization-page';
 import { OrganizationsPage } from './pages/organizations-page';
 import { PostsPage } from './pages/posts-page';
 import { ResetPasswordPage } from './pages/reset-password-page';
+import { SecurityPage } from './pages/security-page';
 import { SignUpPage } from './pages/signup-page';
 
 interface RouterContext {
@@ -177,6 +178,13 @@ const accountsRoute = createRoute({
   },
 });
 
+/** Account security (two-factor, password): about the person, whatever the organization. */
+const securityRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/settings/security',
+  component: SecurityPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -186,7 +194,7 @@ const routeTree = rootRoute.addChildren([
   emailVerifiedRoute,
   organizationsRoute,
   newOrganizationRoute,
-  appRoute.addChildren([postsRoute, accountsRoute]),
+  appRoute.addChildren([postsRoute, accountsRoute, securityRoute]),
 ]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {

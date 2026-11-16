@@ -30,7 +30,8 @@
   "nav": {
     "label": "Main navigation",
     "posts": "Posts",
-    "accounts": "Connected accounts"
+    "accounts": "Connected accounts",
+    "security": "Security"
   },
   "accounts": {
     "title": "Connected accounts",
@@ -66,7 +67,10 @@
       "tooManyAttempts": "Too many attempts. Wait a minute, then try again.",
       "unknown": "Something went wrong. Try again.",
       "emailNotVerified": "Your address is not confirmed yet. We just sent you a new link: open it to activate your account.",
-      "invalidToken": "This link is invalid or has expired."
+      "invalidToken": "This link is invalid or has expired.",
+      "invalidPassword": "Incorrect password.",
+      "invalidCode": "Incorrect code. Check the time on your phone and try again.",
+      "codeExpired": "The check has expired or there were too many attempts. Sign in again with your password."
     }
   },
   "signup": {
@@ -152,6 +156,67 @@
     "invalid": {
       "title": "Invalid or expired link",
       "body": "This confirmation link no longer works. Sign in: a new link will be sent to you."
+    }
+  },
+  "security": {
+    "title": "Account security",
+    "cancel": "Cancel",
+    "password": {
+      "title": "Password",
+      "description": "Changing the password signs out your other sessions; a confirmation email is sent to you.",
+      "current": "Current password",
+      "submit": "Change password",
+      "done": "Password changed. Your other sessions were signed out."
+    },
+    "confirmPassword": "Confirm your password"
+  },
+  "twoFactor": {
+    "title": "Two-factor authentication",
+    "description": "On top of the password, a 6-digit code from your authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…) is asked at sign-in.",
+    "status": "Status:",
+    "on": "on",
+    "off": "off",
+    "enable": "Turn on two-factor authentication",
+    "disable": "Turn off",
+    "regenerate": "Generate new backup codes",
+    "enabledNotice": "Two-factor authentication is on.",
+    "disabledNotice": "Two-factor authentication is off. An email was sent to you.",
+    "codeLabel": "Verification code",
+    "backupCodeLabel": "Backup code",
+    "confirm": {
+      "enable": "Confirm your password to start.",
+      "disable": "Confirm your password to turn off two-factor authentication. Your account will be protected by the password only.",
+      "regenerate": "Confirm your password. The old backup codes will stop working."
+    },
+    "setup": {
+      "step1": "Open your authenticator app.",
+      "step2": "Scan the QR code, or type the key below.",
+      "step3": "Enter the 6-digit code shown by the app.",
+      "qrAlt": "QR code to scan with your authenticator app",
+      "manualKey": "Key to type if you cannot scan:",
+      "confirm": "Confirm and turn on"
+    },
+    "backupCodes": {
+      "explain": "Keep these {{count}} backup codes somewhere safe: each one signs you in once if you lose your phone. They will not be shown again.",
+      "listLabel": "Backup codes",
+      "download": "Download the codes (.txt)",
+      "done": "I saved my codes",
+      "fileTitle": "Ponctua — backup codes (each works once)"
+    },
+    "signIn": {
+      "title": "Two-step verification",
+      "description": "Enter the 6-digit code shown by your authenticator app.",
+      "backupDescription": "Enter one of your backup codes (format XXXXX-XXXXX).",
+      "trustDevice": "Trust this device for 30 days",
+      "verify": "Verify",
+      "verifying": "Verifying…",
+      "useBackup": "Use a backup code",
+      "useApp": "Use the authenticator app",
+      "restart": "Start sign-in again"
+    },
+    "errors": {
+      "codeFormat": "The code has 6 digits.",
+      "backupFormat": "A backup code looks like XXXXX-XXXXX."
     }
   }
 }

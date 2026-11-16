@@ -11,7 +11,13 @@ export type UserOrganization = z.infer<typeof userOrganizationSchema>;
 
 /** The signed-in user and the organizations they can act for. Never carries tokens or passwords. */
 export const meResponseSchema = z.object({
-  user: z.object({ id: z.uuid(), name: z.string(), email: z.email() }),
+  user: z.object({
+    id: z.uuid(),
+    name: z.string(),
+    email: z.email(),
+    /** Authenticator-app codes required at sign-in (ADR 010). */
+    twoFactorEnabled: z.boolean(),
+  }),
   organizations: z.array(userOrganizationSchema),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;

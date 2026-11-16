@@ -5,6 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { type SubmitEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, focusFirstInvalid } from '../components/form-field';
+import { TwoFactorStep } from '../components/two-factor-step';
 import { AuthError, authApi } from '../lib/auth';
 import { meQuery } from '../lib/me';
 
@@ -17,13 +18,24 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  /** Two-factor on: the password was right, a code is still needed before any session. */
+  const [needsCode, setNeedsCode] = useState(false);
+
+  async function signedIn() {
+    // The cached "no session" answer is now wrong: the home route reloads /me and picks the page.
+    queryClient.removeQueries({ queryKey: meQuery.queryKey });
+    await navigate({ to: '/' });
+  }
 
   const signIn = useMutation({
     mutationFn: authApi.signIn,
-    onSuccess: async () => {
-      // The cached "no session" answer is now wrong: the home route reloads /me and picks the page.
-      queryClient.removeQueries({ queryKey: meQuery.queryKey });
-      await navigate({ to: '/' });
+    onSuccess: async ({ twoFactor }) => {
+      if (twoFactor) {
+        setPassword('');
+        setNeedsCode(true);
+        return;
+      }
+      await signedIn();
     },
   });
 
@@ -51,59 +63,69 @@ export function LoginPage() {
   return (
     <>
       <h1 className="mb-6 text-2xl font-semibold">{t('login.title')}</h1>
-      <Card>
-        <CardHeader>
-          <CardDescription>{t('login.description')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form noValidate onSubmit={onSubmit} className="grid gap-4">
-            <FormField
-              label={t('auth.email')}
-              name="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              error={errors.email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-            />
-            <FormField
-              label={t('auth.password')}
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              error={errors.password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-              }}
-            />
-            {signIn.isError && (
-              <p role="alert" className="text-sm font-medium text-destructive">
-                {t(`auth.errors.${failure}`)}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center gap-4">
-              <Button type="submit" disabled={signIn.isPending}>
-                {signIn.isPending ? t('login.submitting') : t('login.submit')}
-              </Button>
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium underline underline-offset-4"
-              >
-                {t('login.forgotPassword')}
+      {needsCode ? (
+        <TwoFactorStep
+          onSignedIn={signedIn}
+          onRestart={() => {
+            signIn.reset();
+            setNeedsCode(false);
+          }}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('login.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form noValidate onSubmit={onSubmit} className="grid gap-4">
+              <FormField
+                label={t('auth.email')}
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                error={errors.email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
+              />
+              <FormField
+                label={t('auth.password')}
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                error={errors.password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                }}
+              />
+              {signIn.isError && (
+                <p role="alert" className="text-sm font-medium text-destructive">
+                  {t(`auth.errors.${failure}`)}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-4">
+                <Button type="submit" disabled={signIn.isPending}>
+                  {signIn.isPending ? t('login.submitting') : t('login.submit')}
+                </Button>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium underline underline-offset-4"
+                >
+                  {t('login.forgotPassword')}
+                </Link>
+              </div>
+            </form>
+            <p className="mt-6 text-sm">
+              {t('login.noAccount')}{' '}
+              <Link to="/signup" className="font-medium underline underline-offset-4">
+                {t('login.signUpLink')}
               </Link>
-            </div>
-          </form>
-          <p className="mt-6 text-sm">
-            {t('login.noAccount')}{' '}
-            <Link to="/signup" className="font-medium underline underline-offset-4">
-              {t('login.signUpLink')}
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

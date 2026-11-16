@@ -21,13 +21,14 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-i18next": "18.0.1",
+    "uqr": "0.1.3",
     "zod": "4.6.7",
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@ponctua/config": "workspace:*",
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.65.0",
+    "@ponctua/config": "workspace:*",
     "@tailwindcss/vite": "4.3.5",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",

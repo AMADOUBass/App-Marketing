@@ -22,12 +22,16 @@ export const ORG_B: UserOrganization = {
 };
 
 /** The /me answer for a signed-in user. */
-export function me(organizations: UserOrganization[] = [ORG_A]): MeResponse {
+export function me(
+  organizations: UserOrganization[] = [ORG_A],
+  { twoFactorEnabled = false }: { twoFactorEnabled?: boolean } = {},
+): MeResponse {
   return {
     user: {
       id: '0195f000-0000-7000-8000-000000000c01',
       name: 'Amélie Tremblay',
       email: 'amelie@agence.ca',
+      twoFactorEnabled,
     },
     organizations,
   };

@@ -1,7 +1,13 @@
 import type { MailMessage } from './mailer.js';
 
 export type EmailLanguage = 'fr' | 'en';
-export type AuthEmailKind = 'verifyEmail' | 'resetPassword' | 'existingAccount' | 'passwordChanged';
+export type AuthEmailKind =
+  | 'verifyEmail'
+  | 'resetPassword'
+  | 'existingAccount'
+  | 'passwordChanged'
+  | 'passwordUpdated'
+  | 'twoFactorDisabled';
 
 /**
  * The language of the browser that triggered the email (Accept-Language), French by default.
@@ -54,6 +60,19 @@ const COPY: Record<EmailLanguage, Record<AuthEmailKind, Copy>> = {
       outro:
         "Si vous n'êtes pas à l'origine de ce changement, réinitialisez votre mot de passe tout de suite.",
     },
+    passwordUpdated: {
+      subject: 'Votre mot de passe a été modifié — Ponctua',
+      intro:
+        'Le mot de passe de votre compte Ponctua vient d’être modifié depuis une session connectée. Vos autres sessions ont été fermées.',
+      outro:
+        "Si vous n'êtes pas à l'origine de ce changement, réinitialisez votre mot de passe tout de suite avec « Mot de passe oublié ».",
+    },
+    twoFactorDisabled: {
+      subject: 'Double authentification désactivée — Ponctua',
+      intro: 'La double authentification de votre compte Ponctua vient d’être désactivée.',
+      outro:
+        "Si vous n'êtes pas à l'origine de ce changement, réinitialisez votre mot de passe tout de suite, puis réactivez la double authentification.",
+    },
   },
   en: {
     verifyEmail: {
@@ -83,6 +102,19 @@ const COPY: Record<EmailLanguage, Record<AuthEmailKind, Copy>> = {
       intro:
         'The password of your Ponctua account was just changed. All your sessions were signed out.',
       outro: 'If you did not make this change, reset your password right away.',
+    },
+    passwordUpdated: {
+      subject: 'Your password was changed — Ponctua',
+      intro:
+        'The password of your Ponctua account was just changed from a signed-in session. Your other sessions were signed out.',
+      outro:
+        'If you did not make this change, reset your password right away with “Forgot password”.',
+    },
+    twoFactorDisabled: {
+      subject: 'Two-factor authentication turned off — Ponctua',
+      intro: 'Two-factor authentication was just turned off for your Ponctua account.',
+      outro:
+        'If you did not make this change, reset your password right away, then turn two-factor authentication back on.',
     },
   },
 };

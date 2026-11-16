@@ -1,6 +1,6 @@
 import { Button } from '@ponctua/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Outlet, useNavigate } from '@tanstack/react-router';
+import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../lib/auth';
@@ -71,6 +71,12 @@ export function AppLayout() {
               <span className="font-medium">{current?.name}</span>
             </p>
           )}
+          <Link
+            to="/settings/security"
+            className="rounded-md px-2 py-1 text-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring [&.active]:underline"
+          >
+            {t('nav.security')}
+          </Link>
           <Button
             variant="outline"
             size="sm"

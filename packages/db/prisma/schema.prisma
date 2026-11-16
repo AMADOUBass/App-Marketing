@@ -276,16 +276,19 @@ model PublishAttempt {
 // ---------------------------------------------------------------------------------------------------------
 
 model User {
-  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false) @map("email_verified")
-  image         String?
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name             String
+  email            String   @unique
+  emailVerified    Boolean  @default(false) @map("email_verified")
+  /// Better Auth two-factor plugin (ADR 010).
+  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
+  image            String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   sessions    Session[]
   accounts    Account[]
+  twoFactors  TwoFactor[]
   memberships Membership[]
 
   @@map("users")
@@ -344,5 +347,25 @@ model Verification {
 
   @@index([identifier])
   @@map("verifications")
+  @@schema("auth")
+}
+
+/// TOTP secret and backup codes, both encrypted by Better Auth with BETTER_AUTH_SECRET (ADR 010).
+/// Reachable by app_auth only, like the whole schema.
+model TwoFactor {
+  id                      String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  secret                  String
+  backupCodes             String    @map("backup_codes")
+  userId                  String    @map("user_id") @db.Uuid
+  /// False until the first code is entered (enabling is confirmed by a valid code).
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0) @map("failed_verification_count")
+  lockedUntil             DateTime? @map("locked_until") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// One TOTP setup per user: enabling again updates it (Better Auth looks it up by user).
+  @@unique([userId])
+  @@map("two_factors")
   @@schema("auth")
 }

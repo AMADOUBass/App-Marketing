@@ -291,7 +291,7 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
   `TenantGuard` session → `x-organization-id` → adhésion (401 / 400 / 403) ; jeton jamais dans le JSON
 - [x] 2. Web : inscription, connexion, choix et création d'organisation, déconnexion ; limite de débit ; `x-dev-organization-id` supprimé (ADR 003 remplacé)
 - [x] 3a. Vérification d'adresse obligatoire, mot de passe oublié, courriels SMTP (Mailpit en dev), jetons hachés (ADR 009)
-- [ ] 3b. 2FA TOTP (page Sécurité, codes de secours, changement de mot de passe)
+- [x] 3b. 2FA TOTP (page Sécurité `/settings/security`, codes de secours chiffrés, appareil de confiance 30 j, changement de mot de passe, avis par courriel — ADR 010)
 - [ ] 3c. Passkeys (`@better-auth/passkey`)
 
 **Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →

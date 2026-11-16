@@ -30,7 +30,8 @@
   "nav": {
     "label": "Navigation principale",
     "posts": "Publications",
-    "accounts": "Comptes connectés"
+    "accounts": "Comptes connectés",
+    "security": "Sécurité"
   },
   "accounts": {
     "title": "Comptes connectés",
@@ -66,7 +67,10 @@
       "tooManyAttempts": "Trop de tentatives. Patientez une minute, puis réessayez.",
       "unknown": "Une erreur est survenue. Réessayez.",
       "emailNotVerified": "Votre adresse n'est pas encore confirmée. Nous venons de vous envoyer un nouveau lien : ouvrez-le pour activer votre compte.",
-      "invalidToken": "Ce lien est invalide ou a expiré."
+      "invalidToken": "Ce lien est invalide ou a expiré.",
+      "invalidPassword": "Mot de passe incorrect.",
+      "invalidCode": "Code incorrect. Vérifiez l’heure de votre téléphone et réessayez.",
+      "codeExpired": "La vérification a expiré ou il y a eu trop d’essais. Reconnectez-vous avec votre mot de passe."
     }
   },
   "signup": {
@@ -152,6 +156,67 @@
     "invalid": {
       "title": "Lien invalide ou expiré",
       "body": "Ce lien de confirmation ne fonctionne plus. Connectez-vous : un nouveau lien vous sera envoyé."
+    }
+  },
+  "security": {
+    "title": "Sécurité du compte",
+    "cancel": "Annuler",
+    "password": {
+      "title": "Mot de passe",
+      "description": "Changer le mot de passe ferme vos autres sessions ; un courriel de confirmation vous est envoyé.",
+      "current": "Mot de passe actuel",
+      "submit": "Changer le mot de passe",
+      "done": "Mot de passe modifié. Vos autres sessions ont été fermées."
+    },
+    "confirmPassword": "Confirmez votre mot de passe"
+  },
+  "twoFactor": {
+    "title": "Double authentification",
+    "description": "En plus du mot de passe, un code à 6 chiffres de votre application d’authentification (Google Authenticator, Microsoft Authenticator, 1Password…) est demandé à la connexion.",
+    "status": "État :",
+    "on": "activée",
+    "off": "désactivée",
+    "enable": "Activer la double authentification",
+    "disable": "Désactiver",
+    "regenerate": "Générer de nouveaux codes de secours",
+    "enabledNotice": "La double authentification est activée.",
+    "disabledNotice": "La double authentification est désactivée. Un courriel vous a été envoyé.",
+    "codeLabel": "Code de vérification",
+    "backupCodeLabel": "Code de secours",
+    "confirm": {
+      "enable": "Confirmez votre mot de passe pour commencer.",
+      "disable": "Confirmez votre mot de passe pour désactiver la double authentification. Votre compte ne sera plus protégé que par le mot de passe.",
+      "regenerate": "Confirmez votre mot de passe. Les anciens codes de secours cesseront de fonctionner."
+    },
+    "setup": {
+      "step1": "Ouvrez votre application d’authentification.",
+      "step2": "Scannez le code QR, ou saisissez la clé ci-dessous.",
+      "step3": "Saisissez le code à 6 chiffres affiché par l’application.",
+      "qrAlt": "Code QR à scanner avec votre application d’authentification",
+      "manualKey": "Clé à saisir si vous ne pouvez pas scanner :",
+      "confirm": "Confirmer et activer"
+    },
+    "backupCodes": {
+      "explain": "Gardez ces {{count}} codes de secours en lieu sûr : chacun permet de vous connecter une fois si vous perdez votre téléphone. Ils ne seront plus affichés.",
+      "listLabel": "Codes de secours",
+      "download": "Télécharger les codes (.txt)",
+      "done": "J’ai enregistré mes codes",
+      "fileTitle": "Ponctua — codes de secours (chacun ne sert qu’une fois)"
+    },
+    "signIn": {
+      "title": "Vérification en deux étapes",
+      "description": "Saisissez le code à 6 chiffres affiché par votre application d’authentification.",
+      "backupDescription": "Saisissez un de vos codes de secours (format XXXXX-XXXXX).",
+      "trustDevice": "Faire confiance à cet appareil pendant 30 jours",
+      "verify": "Vérifier",
+      "verifying": "Vérification…",
+      "useBackup": "Utiliser un code de secours",
+      "useApp": "Utiliser l’application d’authentification",
+      "restart": "Recommencer la connexion"
+    },
+    "errors": {
+      "codeFormat": "Le code contient 6 chiffres.",
+      "backupFormat": "Un code de secours a la forme XXXXX-XXXXX."
     }
   }
 }
