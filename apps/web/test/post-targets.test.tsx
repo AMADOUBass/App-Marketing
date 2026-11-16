@@ -14,13 +14,20 @@ const ACCOUNT = {
   connected: true,
 };
 
-function target(postId: string, state: string, id = crypto.randomUUID()) {
+function target(
+  postId: string,
+  state: string,
+  id = crypto.randomUUID(),
+  extra: { retryAt?: string; statusReason?: string } = {},
+) {
   return {
     id,
     postId,
     socialAccountId: ACCOUNT.id,
     state,
     scheduledAt: '2026-11-20T19:30:00.000Z',
+    retryAt: extra.retryAt ?? null,
+    statusReason: extra.statusReason ?? null,
     updatedAt: '2026-11-16T10:00:00.000Z',
   };
 }
@@ -130,5 +137,42 @@ describe('where each post goes, and how far it got', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(
       'Impossible d’annuler : la publication est peut-être déjà en cours.',
     );
+  });
+
+  it('explains why: what to do, when the next attempt is, a generic text for unknown codes', async () => {
+    const reconnect = post('Compte à reconnecter');
+    const retrying = post('Nouvel essai', 1);
+    const odd = post('Code inconnu', 2);
+    mockApi({
+      '/api/v1/me': { body: me() },
+      '/api/v1/posts': { body: { items: [reconnect, retrying, odd], nextCursor: null } },
+      '/api/v1/publication-targets': {
+        body: {
+          items: [
+            target(reconnect.id, 'needs_action', undefined, { statusReason: 'account.reconnect' }),
+            target(retrying.id, 'retrying', undefined, {
+              retryAt: '2026-11-20T19:45:00.000Z',
+              statusReason: 'platform.transient',
+            }),
+            target(odd.id, 'failed', undefined, { statusReason: 'something.new' }),
+          ],
+        },
+      },
+      '/api/v1/social-accounts': { body: { items: [ACCOUNT] } },
+    });
+    renderApp('/posts');
+
+    expect(
+      await screen.findByText('Reconnectez le compte : son autorisation n’est plus valide.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Nouvel essai prévu')).toBeTruthy();
+    expect(
+      screen.getByText('La plateforme ne répondait pas : un nouvel essai est prévu.'),
+    ).toBeTruthy();
+    const times = [...document.querySelectorAll('time')].map((t) => t.getAttribute('datetime'));
+    expect(times).toContain('2026-11-20T19:45:00.000Z');
+    expect(
+      screen.getByText('Consultez le compte sur la plateforme, puis reprogrammez si besoin.'),
+    ).toBeTruthy();
   });
 });

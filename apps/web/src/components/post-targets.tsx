@@ -16,6 +16,14 @@ const ATTENTION: readonly PublicationStateDto[] = ['failed', 'needs_action', 'un
 
 export const TARGETS_QUERY_KEY = 'publication-targets';
 
+/** States whose reason helps the user (what went wrong, or why it waits). */
+const SHOW_REASON: readonly PublicationStateDto[] = [
+  'retrying',
+  'failed',
+  'needs_action',
+  'unknown_outcome',
+];
+
 /** Where a post goes (one line per social account) and how far it got. */
 export function PostTargets({
   targets,
@@ -35,6 +43,11 @@ export function PostTargets({
       }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [TARGETS_QUERY_KEY] }),
   });
+  /** Known reason codes are translated; a new one falls back to a generic sentence. */
+  const reasonText = (code: string) => {
+    const key = `targets.reasons.${code}`;
+    return i18n.exists(key) ? t(key as 'targets.reasons.other') : t('targets.reasons.other');
+  };
   const dateFormat = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -74,6 +87,19 @@ export function PostTargets({
                       {t('targets.at', { date: dateFormat.format(new Date(target.scheduledAt)) })}
                     </time>
                   </>
+                )}
+                {target.retryAt && target.state === 'retrying' && (
+                  <>
+                    {' '}
+                    <time dateTime={target.retryAt}>
+                      {t('targets.at', { date: dateFormat.format(new Date(target.retryAt)) })}
+                    </time>
+                  </>
+                )}
+                {target.statusReason && SHOW_REASON.includes(target.state) && (
+                  <span className="block text-muted-foreground">
+                    {reasonText(target.statusReason)}
+                  </span>
                 )}
               </span>
               {cancellable && (

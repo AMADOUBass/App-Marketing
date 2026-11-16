@@ -5,6 +5,7 @@ import { createVaultSealer } from '@ponctua/vault/seal';
 import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
+import { ReconcileProcessor } from '../src/publish/reconcile.processor.js';
 import { createSeeder, createTestEnv, type Fixture, startWorker } from './helpers.js';
 
 const IG_ACCOUNT_ID = '17841472428926955';
@@ -244,5 +245,77 @@ describe('Instagram publishing in the worker', () => {
       VAULT_MASTER_PRIVATE_KEYS: `${master.id}:${master.privateKey}`,
     });
     expect(JSON.stringify(env)).not.toContain(master.privateKey);
+  });
+});
+
+describe('Instagram reconciliation of unknown outcomes (ADR 013)', () => {
+  async function reconcilerWith(graph: ReturnType<typeof fakeGraph>) {
+    const env = createTestEnv('publish', {
+      INSTAGRAM_PUBLISHING_ENABLED: 'true',
+      VAULT_MASTER_PRIVATE_KEYS: `${master.id}:${master.privateKey}`,
+    });
+    const app = await startWorker(env, undefined, { graphFetch: graph.fetchImpl });
+    running.push(app);
+    return app.get(ReconcileProcessor);
+  }
+
+  /** Publishes with no answer to media_publish: the target ends in unknown_outcome. */
+  async function unknownOutcome() {
+    const processor = await processorWith(fakeGraph({ publish: { networkError: true } }));
+    const { targetId } = await instagramTarget();
+    expect(await run(processor, targetId)).toBe('unknown_outcome');
+    return targetId;
+  }
+
+  it('container PUBLISHED -> published, by asking only the container status (never publishing)', async () => {
+    const targetId = await unknownOutcome();
+    const graph = fakeGraph({ status: { json: { status_code: 'PUBLISHED', id: CONTAINER_ID } } });
+    const reconciler = await reconcilerWith(graph);
+
+    expect(await reconciler.process({ organizationId: a.orgId, targetId, checkNo: 0 })).toBe(
+      'published',
+    );
+    expect(graph.calls.map((c) => c.step)).toEqual(['status']);
+    expect(graph.calls[0]?.url).toContain(`/${CONTAINER_ID}`);
+  });
+
+  it('container FINISHED (ready, never published) -> retrying: a new attempt is safe', async () => {
+    const targetId = await unknownOutcome();
+    const reconciler = await reconcilerWith(fakeGraph());
+
+    expect(await reconciler.process({ organizationId: a.orgId, targetId, checkNo: 0 })).toBe(
+      'retrying',
+    );
+  });
+
+  it('container still IN_PROGRESS -> still unknown, asked again later', async () => {
+    const targetId = await unknownOutcome();
+    const reconciler = await reconcilerWith(
+      fakeGraph({ status: { json: { status_code: 'IN_PROGRESS', id: CONTAINER_ID } } }),
+    );
+
+    expect(await reconciler.process({ organizationId: a.orgId, targetId, checkNo: 0 })).toBe(
+      'unknown_outcome',
+    );
+  });
+
+  it('no container recorded (the worker died before creating it) -> retrying, without calling Instagram', async () => {
+    const { targetId } = await instagramTarget();
+    await seed.db.withTenant(a.orgId, async (tx) => {
+      await tx.publicationTarget.update({
+        where: { id: targetId },
+        data: { state: 'unknown_outcome' },
+      });
+      await tx.publishAttempt.create({
+        data: { organizationId: a.orgId, targetId, attemptNo: 1, response: {} },
+      });
+    });
+    const graph = fakeGraph();
+    const reconciler = await reconcilerWith(graph);
+
+    expect(await reconciler.process({ organizationId: a.orgId, targetId, checkNo: 0 })).toBe(
+      'retrying',
+    );
+    expect(graph.calls).toEqual([]);
   });
 });

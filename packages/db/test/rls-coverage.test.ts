@@ -70,14 +70,18 @@ describe('row-level security coverage', () => {
     }
   });
 
-  it('cross-organization policies are limited to the reviewed exceptions (ADR 005, ADR 008)', async () => {
+  it('cross-organization policies are limited to the reviewed exceptions (ADR 005, ADR 008, ADR 013)', async () => {
     const allowed: Record<string, string[]> = {
       memberships: ['directory_read', 'tenant_isolation'],
       organizations: ['directory_read', 'tenant_isolation'],
+      outbox_events: ['relay_mark', 'relay_read', 'tenant_isolation'],
       publication_targets: [
         'scheduler_expire',
+        'scheduler_precheck',
         'scheduler_queue',
         'scheduler_read',
+        'scheduler_reconcile',
+        'scheduler_retry',
         'tenant_isolation',
       ],
     };
@@ -88,7 +92,7 @@ describe('row-level security coverage', () => {
     }
   });
 
-  it('SECURITY DEFINER functions are limited to the reviewed ones (ADR 005, ADR 008)', async () => {
+  it('SECURITY DEFINER functions are limited to the reviewed ones (ADR 005, ADR 008, ADR 013)', async () => {
     const { rows } = await client.query<{ name: string; owner: string }>(`
       SELECT p.proname AS name, pg_get_userbyid(p.proowner) AS owner
       FROM pg_proc p
@@ -96,7 +100,12 @@ describe('row-level security coverage', () => {
       ORDER BY p.proname`);
 
     expect(rows).toEqual([
+      { name: 'claim_due_prechecks', owner: 'app_scheduler' },
       { name: 'claim_due_publication_targets', owner: 'app_scheduler' },
+      { name: 'claim_due_reconciliations', owner: 'app_scheduler' },
+      { name: 'claim_due_retries', owner: 'app_scheduler' },
+      { name: 'claim_outbox_events', owner: 'app_scheduler' },
+      { name: 'complete_outbox_events', owner: 'app_scheduler' },
       { name: 'expire_stuck_publications', owner: 'app_scheduler' },
       { name: 'list_user_organizations', owner: 'app_directory' },
       { name: 'requeue_stale_publication_targets', owner: 'app_scheduler' },

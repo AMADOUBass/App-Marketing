@@ -48,6 +48,10 @@ export const publicationTargetSchema = z.object({
   socialAccountId: z.uuid(),
   state: publicationStateSchema,
   scheduledAt: z.iso.datetime().nullable(),
+  /** retrying: when the next attempt may start (ADR 013). */
+  retryAt: z.iso.datetime().nullable(),
+  /** Why it is retrying, failed or needs action: a code the web app translates (ADR 013). */
+  statusReason: z.string().nullable(),
   updatedAt: z.iso.datetime(),
 });
 export type PublicationTargetDto = z.infer<typeof publicationTargetSchema>;

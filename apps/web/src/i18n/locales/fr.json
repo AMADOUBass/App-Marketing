@@ -276,6 +276,22 @@
       "unknown_outcome": "Résultat à vérifier",
       "reconciled": "Vérifié",
       "cancelled": "Annulé"
+    },
+    "reasons": {
+      "other": "Consultez le compte sur la plateforme, puis reprogrammez si besoin.",
+      "platform.transient": "La plateforme ne répondait pas : un nouvel essai est prévu.",
+      "platform.quota": "Limite de publication atteinte sur la plateforme : un nouvel essai est prévu.",
+      "platform.content": "La plateforme a refusé le contenu (image, texte ou format).",
+      "platform.unknown": "La plateforme a refusé la publication.",
+      "platform.unavailable": "Cette plateforme n’est pas encore disponible.",
+      "account.reconnect": "Reconnectez le compte : son autorisation n’est plus valide.",
+      "account.not_connected": "Le compte n’est pas connecté.",
+      "media.required": "Cette plateforme a besoin d’une image.",
+      "retries.exhausted": "Échec après plusieurs essais : vérifiez le compte et reprogrammez.",
+      "outcome.unknown": "Nous vérifions auprès de la plateforme si la publication est partie.",
+      "outcome.not_sent": "La publication n’était pas partie : un nouvel essai est prévu.",
+      "outcome.confirmed": "Publication confirmée par la plateforme après vérification.",
+      "outcome.unconfirmed": "Impossible de confirmer si la publication est partie : vérifiez sur le compte avant de reprogrammer."
     }
   }
 }

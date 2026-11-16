@@ -276,6 +276,22 @@
       "unknown_outcome": "Result to check",
       "reconciled": "Checked",
       "cancelled": "Cancelled"
+    },
+    "reasons": {
+      "other": "Check the account on the platform, then reschedule if needed.",
+      "platform.transient": "The platform did not answer: another attempt is planned.",
+      "platform.quota": "Publishing limit reached on the platform: another attempt is planned.",
+      "platform.content": "The platform refused the content (image, text or format).",
+      "platform.unknown": "The platform refused the publication.",
+      "platform.unavailable": "This platform is not available yet.",
+      "account.reconnect": "Reconnect the account: its authorization is no longer valid.",
+      "account.not_connected": "The account is not connected.",
+      "media.required": "This platform needs an image.",
+      "retries.exhausted": "Failed after several attempts: check the account and reschedule.",
+      "outcome.unknown": "We are checking with the platform whether it went out.",
+      "outcome.not_sent": "It had not gone out: another attempt is planned.",
+      "outcome.confirmed": "Publication confirmed by the platform after a check.",
+      "outcome.unconfirmed": "We could not confirm whether it went out: check the account before rescheduling."
     }
   }
 }

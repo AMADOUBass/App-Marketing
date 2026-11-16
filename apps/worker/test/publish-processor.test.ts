@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { PublishHandler } from '../src/publish/publish-handler.js';
+import type { PublishHandler, ReconcileResult } from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
 import {
   createSeeder,
@@ -18,6 +18,10 @@ let a: Fixture;
 let b: Fixture;
 
 class SwitchableHandler implements PublishHandler {
+  reconcile(): Promise<ReconcileResult> {
+    return Promise.resolve({ outcome: 'unknown' });
+  }
+
   current: PublishHandler = new RecordingHandler();
   publish: PublishHandler['publish'] = (target, hooks) => this.current.publish(target, hooks);
 }
@@ -103,6 +107,7 @@ describe('outcomes', () => {
   it('marks unknown_outcome when the adapter throws (never retried blindly)', async () => {
     switchable.current = {
       publish: () => Promise.reject(new Error('socket hang up after upload')),
+      reconcile: () => Promise.resolve({ outcome: 'unknown' }),
     };
     const target = await queuedTarget(a);
 

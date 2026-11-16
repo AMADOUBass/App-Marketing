@@ -41,6 +41,7 @@ model Organization {
   key                OrganizationKey?
   oauthCredentials   OauthCredential[]
   idempotencyKeys    IdempotencyKey[]
+  outboxEvents       OutboxEvent[]
 
   @@map("organizations")
   @@schema("public")
@@ -218,6 +219,14 @@ model PublicationTarget {
   attemptCount        Int              @default(0) @map("attempt_count")
   /// Set when a worker starts publishing. A target stuck past the lease is moved to unknown_outcome.
   publishingStartedAt DateTime?        @map("publishing_started_at") @db.Timestamptz(6)
+  /// retrying: when the next attempt may start. unknown_outcome: when to check the platform again (ADR 013).
+  retryAt             DateTime?        @map("retry_at") @db.Timestamptz(6)
+  /// How many times the platform was asked about an unknown outcome without a clear answer.
+  reconcileCount      Int              @default(0) @map("reconcile_count")
+  /// Set when the 15-minute pre-check ran (reset when the post is rescheduled).
+  precheckedAt        DateTime?        @map("prechecked_at") @db.Timestamptz(6)
+  /// Why the target is retrying, failed or needs action: a code the web app translates, never raw text.
+  statusReason        String?          @map("status_reason")
   createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -230,6 +239,26 @@ model PublicationTarget {
   /// A post can target a social account only once (no double publication).
   @@unique([postId, socialAccountId])
   @@map("publication_targets")
+  @@schema("public")
+}
+
+/// Transactional outbox (CLAUDE.md section 5): written in the same transaction as the state change, then
+/// relayed to the queue by the scheduler (ADR 013). Payload: identifiers and codes only, never content.
+model OutboxEvent {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  /// e.g. publication.published, publication.failed, publication.needs_action
+  type           String
+  payload        Json
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// Lease of the relay that took it (a crashed relay's events are taken again after the lease).
+  claimedAt      DateTime? @map("claimed_at") @db.Timestamptz(6)
+  deliveredAt    DateTime? @map("delivered_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, id])
+  @@map("outbox_events")
   @@schema("public")
 }
 

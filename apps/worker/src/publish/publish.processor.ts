@@ -8,6 +8,8 @@ import type { Db, PublicationState } from '@ponctua/db';
 import { Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
+import { RETRYABLE, retryDelaySeconds } from '../common/backoff.js';
+import { recordTargetEvent } from '../common/outbox.js';
 import { PUBLISH_QUEUE, type PublishJobData } from '../common/queues.js';
 import { DB, LOGGER, VALKEY } from '../common/tokens.js';
 import { ENV, type Env } from '../config/env.js';
@@ -118,9 +120,10 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
     } catch (error) {
       // We cannot know whether the platform received it: reconcile before any new attempt (CLAUDE.md).
       log.error({ err: error }, 'publish handler threw; outcome unknown');
-      result = { state: 'unknown_outcome', errorClass: 'unknown' };
+      result = { state: 'unknown_outcome', errorClass: 'unknown', reason: 'outcome.unknown' };
     }
     const outcome: PublicationState = result.state;
+    const next = this.nextStep(result, job.attemptNo);
 
     const stored = await this.db.withTenant(job.organizationId, async (tx) => {
       // The attempt keeps what the adapter reported, even if the lease expired meanwhile.
@@ -135,8 +138,22 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
       });
       const { count } = await tx.publicationTarget.updateMany({
         where: { id: job.targetId, state: 'publishing', attemptCount: job.attemptNo },
-        data: { state: outcome },
+        data: {
+          state: next.state,
+          retryAt: next.retryAt,
+          statusReason: next.reason,
+          reconcileCount: 0,
+        },
       });
+      if (count === 1) {
+        await recordTargetEvent(tx, {
+          organizationId: job.organizationId,
+          targetId: job.targetId,
+          socialAccountId: target.socialAccountId,
+          state: next.state,
+          reason: next.reason,
+        });
+      }
       return count === 1;
     });
     if (!stored) {
@@ -147,7 +164,29 @@ export class PublishProcessor implements OnApplicationBootstrap, OnApplicationSh
       );
       return 'unknown_outcome';
     }
-    log.info({ outcome }, 'publish job finished');
-    return outcome;
+    log.info({ outcome, state: next.state, reason: next.reason }, 'publish job finished');
+    return next.state;
+  }
+
+  /**
+   * What the target becomes (ADR 013). A transient or quota failure the platform marks as retryable
+   * becomes 'retrying' with an exponential delay while attempts remain, then 'failed'. Anything else
+   * keeps the handler's state; unknown_outcome is reconciled before any new attempt.
+   */
+  private nextStep(
+    result: PublishResult,
+    attemptNo: number,
+  ): { state: PublicationState; retryAt: Date | null; reason: string | null } {
+    const reason = result.reason ?? null;
+    const retryable =
+      result.state === 'failed' &&
+      result.retryable === true &&
+      RETRYABLE.includes(result.errorClass ?? 'unknown');
+    if (!retryable) return { state: result.state, retryAt: null, reason };
+    if (attemptNo >= this.env.PUBLISH_MAX_ATTEMPTS) {
+      return { state: 'failed', retryAt: null, reason: 'retries.exhausted' };
+    }
+    const delay = retryDelaySeconds(this.env, attemptNo, result.errorClass);
+    return { state: 'retrying', retryAt: new Date(Date.now() + delay * 1000), reason };
   }
 }

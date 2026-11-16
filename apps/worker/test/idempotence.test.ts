@@ -8,6 +8,7 @@ import type {
   PublishOutcomeState,
   PublishResult,
   PublishTarget,
+  ReconcileResult,
 } from '../src/publish/publish-handler.js';
 import { PublishProcessor } from '../src/publish/publish.processor.js';
 import { createSeeder, createTestEnv, type Fixture, startWorker, waitFor } from './helpers.js';
@@ -18,6 +19,10 @@ let a: Fixture;
 
 /** Slow adapter: widens the window in which a duplicate could slip through. */
 class SlowHandler implements PublishHandler {
+  reconcile(): Promise<ReconcileResult> {
+    return Promise.resolve({ outcome: 'unknown' });
+  }
+
   readonly calls: PublishTarget[] = [];
   constructor(
     private readonly delayMs = 300,
@@ -138,6 +143,7 @@ describe('a publication never disappears (rule 6)', () => {
   it('lease expired while the adapter was still running: the attempt keeps the reported outcome', async () => {
     let release: (outcome: PublishOutcomeState) => void = () => undefined;
     const blocked: PublishHandler = {
+      reconcile: () => Promise.resolve({ outcome: 'unknown' }),
       publish: () =>
         new Promise<PublishResult>((resolve) => {
           release = (state) => {

@@ -231,6 +231,8 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
           .map((t) => ({
             ...t,
             scheduledAt: '2026-11-20T19:30:00.000Z',
+            retryAt: null,
+            statusReason: null,
             updatedAt: '2026-11-16T10:00:00.000Z',
           })),
       });

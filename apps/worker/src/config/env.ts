@@ -36,6 +36,19 @@ export const envSchema = z
      */
     PUBLISH_LEASE_SECONDS: int(1, 86_400).default(1800),
     PUBLISH_CONCURRENCY: int(1, 100).default(5),
+    /** Attempts in all (first one included) for transient or quota errors; then failed (ADR 013). */
+    PUBLISH_MAX_ATTEMPTS: int(1, 20).default(5),
+    /** Delay before the first retry of a transient error; doubled each time, with jitter, up to the max. */
+    RETRY_BASE_SECONDS: int(1, 3600).default(60),
+    RETRY_MAX_SECONDS: int(1, 86_400).default(3600),
+    /** A quota error waits at least this long (the platform window has to move). */
+    QUOTA_RETRY_SECONDS: int(1, 86_400).default(900),
+    /** Inconclusive checks of an unknown outcome before asking a human (needs_action). */
+    RECONCILE_MAX_CHECKS: int(1, 50).default(5),
+    /** A reconciliation job that has not answered within this lease is started again. */
+    RECONCILE_LEASE_SECONDS: int(1, 86_400).default(300),
+    /** A relayed outbox event not confirmed within this lease is relayed again (same job id). */
+    OUTBOX_LEASE_SECONDS: int(1, 3600).default(60),
     /** Feature flag: real Instagram publishing. Off -> targets end in needs_action, nothing is sent. */
     INSTAGRAM_PUBLISHING_ENABLED: z.stringbool().default(false),
     /**

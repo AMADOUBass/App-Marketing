@@ -72,6 +72,22 @@ export interface Db {
     requeueStale(options: { graceSeconds: number; limit: number }): Promise<DispatchItem[]>;
     /** Publishing for longer than `leaseSeconds` (worker died): -> unknown_outcome, reconcile first. */
     expireStuck(options: { leaseSeconds: number; limit: number }): Promise<DispatchItem[]>;
+    /** retrying -> queued once retry_at is within `horizonSeconds` (new attempt number; ADR 013). */
+    claimDueRetries(options: { horizonSeconds: number; limit: number }): Promise<DispatchItem[]>;
+    /** unknown_outcome targets to check with the platform; takes a lease of `leaseSeconds`. */
+    claimDueReconciliations(options: {
+      leaseSeconds: number;
+      limit: number;
+    }): Promise<ReconcileItem[]>;
+    /** Scheduled targets due within `leadSeconds` whose pre-check has not run (marked taken, once). */
+    claimDuePrechecks(options: { leadSeconds: number; limit: number }): Promise<PrecheckItem[]>;
+  };
+  /** Transactional outbox relay (ADR 013): cross-organization, through SECURITY DEFINER functions. */
+  outbox: {
+    /** Leases undelivered events (a crashed relay's events come back after `leaseSeconds`). */
+    claim(options: { leaseSeconds: number; limit: number }): Promise<OutboxItem[]>;
+    /** Marks events handed to the queue. Returns how many were marked. */
+    complete(eventIds: readonly string[]): Promise<number>;
   };
   disconnect(): Promise<void>;
 }
@@ -97,6 +113,28 @@ export interface UserOrganization {
   organizationId: string;
   name: string;
   role: OrganizationRole;
+}
+
+export interface ReconcileItem {
+  organizationId: string;
+  targetId: string;
+  /** How many inconclusive checks came before this one (part of the job id). */
+  checkNo: number;
+}
+
+export interface PrecheckItem {
+  organizationId: string;
+  targetId: string;
+  scheduledAt: Date;
+}
+
+/** An outbox event as the relay sees it: the payload holds identifiers and codes only. */
+export interface OutboxItem {
+  eventId: string;
+  organizationId: string;
+  type: string;
+  payload: unknown;
+  createdAt: Date;
 }
 
 /** What the scheduler may know about a target: identifiers and timing, never content. */
@@ -207,6 +245,64 @@ export function createDb(options: DbOptions): Db {
           SELECT organization_id, target_id, scheduled_at, attempt_no
           FROM expire_stuck_publications(${leaseSeconds}::integer, ${limit}::integer)`;
         return rows.map(toDispatchItem);
+      },
+      claimDueRetries: async ({ horizonSeconds, limit }) => {
+        const rows = await prisma.$queryRaw<DispatchRow[]>`
+          SELECT organization_id, target_id, scheduled_at, attempt_no
+          FROM claim_due_retries(${horizonSeconds}::integer, ${limit}::integer)`;
+        return rows.map(toDispatchItem);
+      },
+      claimDueReconciliations: async ({ leaseSeconds, limit }) => {
+        const rows = await prisma.$queryRaw<
+          { organization_id: string; target_id: string; check_no: number }[]
+        >`
+          SELECT organization_id, target_id, check_no
+          FROM claim_due_reconciliations(${leaseSeconds}::integer, ${limit}::integer)`;
+        return rows.map((row) => ({
+          organizationId: row.organization_id,
+          targetId: row.target_id,
+          checkNo: row.check_no,
+        }));
+      },
+      claimDuePrechecks: async ({ leadSeconds, limit }) => {
+        const rows = await prisma.$queryRaw<
+          { organization_id: string; target_id: string; scheduled_at: Date }[]
+        >`
+          SELECT organization_id, target_id, scheduled_at
+          FROM claim_due_prechecks(${leadSeconds}::integer, ${limit}::integer)`;
+        return rows.map((row) => ({
+          organizationId: row.organization_id,
+          targetId: row.target_id,
+          scheduledAt: row.scheduled_at,
+        }));
+      },
+    },
+    outbox: {
+      claim: async ({ leaseSeconds, limit }) => {
+        const rows = await prisma.$queryRaw<
+          {
+            event_id: string;
+            organization_id: string;
+            type: string;
+            payload: unknown;
+            created_at: Date;
+          }[]
+        >`
+          SELECT event_id, organization_id, type, payload, created_at
+          FROM claim_outbox_events(${leaseSeconds}::integer, ${limit}::integer)`;
+        return rows.map((row) => ({
+          eventId: row.event_id,
+          organizationId: row.organization_id,
+          type: row.type,
+          payload: row.payload,
+          createdAt: row.created_at,
+        }));
+      },
+      complete: async (eventIds) => {
+        if (eventIds.length === 0) return 0;
+        const [row] = await prisma.$queryRaw<{ marked: number }[]>`
+          SELECT complete_outbox_events(${[...eventIds]}::uuid[]) AS marked`;
+        return row?.marked ?? 0;
       },
     },
     idempotent: <T>(

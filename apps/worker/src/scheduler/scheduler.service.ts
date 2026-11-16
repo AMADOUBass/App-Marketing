@@ -4,17 +4,33 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import type { Db, DispatchItem } from '@ponctua/db';
+import type { Db, DispatchItem, ReconcileItem } from '@ponctua/db';
 import type { Queue } from 'bullmq';
 import type { Logger } from 'pino';
-import { PUBLISH_QUEUE, type PublishJobData, publishJobId } from '../common/queues.js';
-import { DB, LOGGER, PUBLISH_QUEUE_CLIENT } from '../common/tokens.js';
+import {
+  type EventJobData,
+  PUBLISH_QUEUE,
+  type PublishJobData,
+  publishJobId,
+  RECONCILE_QUEUE,
+  type ReconcileJobData,
+  reconcileJobId,
+} from '../common/queues.js';
+import {
+  DB,
+  EVENTS_QUEUE_CLIENT,
+  LOGGER,
+  PUBLISH_QUEUE_CLIENT,
+  RECONCILE_QUEUE_CLIENT,
+} from '../common/tokens.js';
 import { ENV, type Env } from '../config/env.js';
 import { LeaderLock } from './leader-lock.js';
 
 export interface TickResult {
   leader: boolean;
   enqueued: number;
+  reconciliations: number;
+  events: number;
 }
 
 /**
@@ -30,6 +46,8 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
     @Inject(ENV) private readonly env: Env,
     @Inject(DB) private readonly db: Db,
     @Inject(PUBLISH_QUEUE_CLIENT) private readonly queue: Queue<PublishJobData>,
+    @Inject(RECONCILE_QUEUE_CLIENT) private readonly reconcileQueue: Queue<ReconcileJobData>,
+    @Inject(EVENTS_QUEUE_CLIENT) private readonly eventsQueue: Queue<EventJobData>,
     private readonly lock: LeaderLock,
     @Inject(LOGGER) private readonly logger: Logger,
   ) {}
@@ -55,7 +73,9 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
 
   private async runTick(): Promise<TickResult> {
     try {
-      if (!(await this.lock.acquireOrRenew())) return { leader: false, enqueued: 0 };
+      if (!(await this.lock.acquireOrRenew())) {
+        return { leader: false, enqueued: 0, reconciliations: 0, events: 0 };
+      }
 
       const due = await this.db.scheduler.claimDue({
         horizonSeconds: this.env.SCHEDULER_HORIZON_SECONDS,
@@ -80,12 +100,31 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
         );
       }
 
-      await this.enqueue([...due, ...stale]);
-      return { leader: true, enqueued: due.length + stale.length };
+      // Retries whose time has come (ADR 013): a new attempt, with the exact remaining delay.
+      const retries = await this.db.scheduler.claimDueRetries({
+        horizonSeconds: this.env.SCHEDULER_HORIZON_SECONDS,
+        limit: this.env.SCHEDULER_BATCH_SIZE,
+      });
+      // Unknown outcomes (including those just expired): ask the platform, never publish blindly.
+      const reconciliations = await this.db.scheduler.claimDueReconciliations({
+        leaseSeconds: this.env.RECONCILE_LEASE_SECONDS,
+        limit: this.env.SCHEDULER_BATCH_SIZE,
+      });
+
+      await this.enqueue([...due, ...stale, ...retries]);
+      await this.enqueueReconciliations(reconciliations);
+      const events = await this.relayOutbox();
+      return {
+        leader: true,
+        enqueued: due.length + stale.length + retries.length,
+        reconciliations: reconciliations.length,
+        events,
+      };
     } catch (error) {
-      // A failed pass is retried on the next tick; claimed-but-not-enqueued targets are recovered later.
+      // A failed pass is retried on the next tick. Anything claimed but not enqueued comes back:
+      // queued targets through requeueStale, reconciliations and outbox events after their lease.
       this.logger.error({ err: error }, 'scheduler tick failed');
-      return { leader: true, enqueued: 0 };
+      return { leader: true, enqueued: 0, reconciliations: 0, events: 0 };
     }
   }
 
@@ -109,5 +148,56 @@ export class SchedulerService implements OnApplicationBootstrap, OnApplicationSh
       })),
     );
     this.logger.info({ count: items.length }, 'targets handed to the publish queue');
+  }
+
+  private async enqueueReconciliations(items: ReconcileItem[]): Promise<void> {
+    if (items.length === 0) return;
+    await this.reconcileQueue.addBulk(
+      items.map((item) => ({
+        name: RECONCILE_QUEUE,
+        data: {
+          organizationId: item.organizationId,
+          targetId: item.targetId,
+          checkNo: item.checkNo,
+        },
+        opts: {
+          jobId: reconcileJobId(item.targetId, item.checkNo),
+          // Removed at once: after the lease, the same check may be handed out again with this id.
+          removeOnComplete: true,
+          removeOnFail: { age: 7 * 86_400 },
+        },
+      })),
+    );
+    this.logger.info({ count: items.length }, 'unknown outcomes handed to reconciliation');
+  }
+
+  /**
+   * Transactional outbox relay (ADR 013): leases undelivered events, hands them to the queue with the
+   * event id as job id (a second hand-off after a crash is a no-op), then marks them delivered.
+   */
+  private async relayOutbox(): Promise<number> {
+    const events = await this.db.outbox.claim({
+      leaseSeconds: this.env.OUTBOX_LEASE_SECONDS,
+      limit: this.env.SCHEDULER_BATCH_SIZE,
+    });
+    if (events.length === 0) return 0;
+    await this.eventsQueue.addBulk(
+      events.map((event) => ({
+        name: event.type,
+        data: {
+          eventId: event.eventId,
+          organizationId: event.organizationId,
+          type: event.type,
+          payload: event.payload,
+        },
+        opts: {
+          jobId: event.eventId,
+          removeOnComplete: { age: 86_400 },
+          removeOnFail: { age: 7 * 86_400 },
+        },
+      })),
+    );
+    await this.db.outbox.complete(events.map((event) => event.eventId));
+    return events.length;
   }
 }

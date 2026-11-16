@@ -30,6 +30,8 @@ function toDto(target: PublicationTarget): PublicationTargetDto {
     socialAccountId: target.socialAccountId,
     state: target.state,
     scheduledAt: target.scheduledAt?.toISOString() ?? null,
+    retryAt: target.retryAt?.toISOString() ?? null,
+    statusReason: target.statusReason,
     updatedAt: target.updatedAt.toISOString(),
   };
 }
@@ -108,7 +110,14 @@ export class SchedulingService {
           const target = existing
             ? await tx.publicationTarget.update({
                 where: { id: existing.id },
-                data: { state: 'scheduled', scheduledAt },
+                // A new time: the 15-minute pre-check runs again, older reasons no longer apply.
+                data: {
+                  state: 'scheduled',
+                  scheduledAt,
+                  precheckedAt: null,
+                  retryAt: null,
+                  statusReason: null,
+                },
               })
             : await tx.publicationTarget.create({
                 data: { organizationId, postId, socialAccountId, state: 'scheduled', scheduledAt },

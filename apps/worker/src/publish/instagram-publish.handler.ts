@@ -2,10 +2,12 @@ import type { Db } from '@ponctua/db';
 import type { PlatformAdapter, PublishOutcome } from '@ponctua/integrations';
 import type { VaultOpener } from '@ponctua/vault/open';
 import type {
+  AttemptData,
   PublishHandler,
   PublishHooks,
   PublishResult,
   PublishTarget,
+  ReconcileResult,
 } from './publish-handler.js';
 
 /** Phase 0: the media library does not exist yet, so the type comes from the URL extension. */
@@ -16,7 +18,7 @@ function mimeTypeOf(url: string): string {
     : 'application/octet-stream';
 }
 
-/** Adapter outcome -> target state. Retries come with the publishing engine; nothing stays in flight. */
+/** Adapter outcome -> what the processor needs. Whether to retry is decided there (ADR 013). */
 export function toPublishResult(outcome: PublishOutcome): PublishResult {
   switch (outcome.status) {
     case 'published':
@@ -28,13 +30,17 @@ export function toPublishResult(outcome: PublishOutcome): PublishResult {
       return {
         state: 'unknown_outcome',
         errorClass: 'unknown',
+        reason: 'outcome.unknown',
         response: { containerId: outcome.containerId },
       };
     case 'failed':
       return {
-        // A token or account problem needs the client (reconnect, restriction); the rest is a final failure.
+        // A token or account problem needs the client (reconnect, restriction): never retried blindly.
         state: outcome.errorClass === 'auth' ? 'needs_action' : 'failed',
         errorClass: outcome.errorClass,
+        retryable: outcome.retryable,
+        reason:
+          outcome.errorClass === 'auth' ? 'account.reconnect' : `platform.${outcome.errorClass}`,
         response: { containerId: outcome.containerId, detail: outcome.detail },
       };
   }
@@ -51,6 +57,15 @@ export class InstagramPublishHandler implements PublishHandler {
     private readonly opener: VaultOpener,
     private readonly adapter: PlatformAdapter<unknown>,
   ) {}
+
+  private loadCredential(target: PublishTarget) {
+    return this.db.withTenant(target.organizationId, (tx) =>
+      this.opener.loadCredential(tx, {
+        organizationId: target.organizationId,
+        socialAccountId: target.socialAccountId,
+      }),
+    );
+  }
 
   async publish(target: PublishTarget, hooks: PublishHooks): Promise<PublishResult> {
     const context = await this.db.withTenant(target.organizationId, async (tx) => ({
@@ -72,11 +87,17 @@ export class InstagramPublishHandler implements PublishHandler {
       return {
         state: 'needs_action',
         errorClass: 'auth',
+        reason: 'account.not_connected',
         response: { reason: 'account not connected' },
       };
     }
     if (!context.post.imageUrl) {
-      return { state: 'failed', errorClass: 'content', response: { reason: 'post has no image' } };
+      return {
+        state: 'failed',
+        errorClass: 'content',
+        reason: 'media.required',
+        response: { reason: 'post has no image' },
+      };
     }
 
     const outcome = await this.adapter.publish(
@@ -92,5 +113,40 @@ export class InstagramPublishHandler implements PublishHandler {
       { onContainerCreated: (containerId) => hooks.recordProgress({ containerId }) },
     );
     return toPublishResult(outcome);
+  }
+
+  /**
+   * Instagram publishes a container, and the container id is stored BEFORE media_publish is called
+   * (onContainerCreated). So: no container id recorded = media_publish never ran = nothing published.
+   * With a container id, its status tells (PUBLISHED, or never published: FINISHED / EXPIRED / ERROR).
+   */
+  async reconcile(target: PublishTarget, attempt: AttemptData | null): Promise<ReconcileResult> {
+    const containerId = attempt?.containerId;
+    if (typeof containerId !== 'string' || containerId === '') {
+      return {
+        outcome: 'not_published',
+        errorClass: 'transient',
+        retryable: true,
+        reason: 'outcome.not_sent',
+      };
+    }
+    const credential = await this.loadCredential(target);
+    if (!credential) return { outcome: 'unknown' }; // Cannot ask: a human will decide.
+
+    const status = await this.adapter.reconcile(containerId, credential.tokens.accessToken);
+    if (!status) return { outcome: 'unknown' };
+    if (status.status === 'published') {
+      return { outcome: 'published', response: { containerId, reconciled: true } };
+    }
+    if (status.status === 'failed') {
+      return {
+        outcome: 'not_published',
+        errorClass: status.errorClass,
+        retryable: status.retryable,
+        reason:
+          status.errorClass === 'auth' ? 'account.reconnect' : `platform.${status.errorClass}`,
+      };
+    }
+    return { outcome: 'unknown' };
   }
 }

@@ -9,6 +9,7 @@ import type {
   PublishOutcomeState,
   PublishResult,
   PublishTarget,
+  ReconcileResult,
 } from '../src/publish/publish-handler.js';
 import { WorkerModule, type WorkerModuleOptions } from '../src/worker.module.js';
 
@@ -42,6 +43,10 @@ export async function startWorker(
 
 /** Records when each target reaches the platform adapter. */
 export class RecordingHandler implements PublishHandler {
+  reconcile(): Promise<ReconcileResult> {
+    return Promise.resolve({ outcome: 'unknown' });
+  }
+
   readonly calls: { target: PublishTarget; at: number }[] = [];
 
   constructor(private readonly outcome: PublishOutcomeState = 'published') {}

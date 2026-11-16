@@ -8,6 +8,8 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
+  // Full page reloads under parallel axe runs can take more than the default 5 s on a busy machine.
+  expect: { timeout: 10_000 },
   use: {
     baseURL: `http://127.0.0.1:${String(PORT)}`,
     trace: 'retain-on-failure',

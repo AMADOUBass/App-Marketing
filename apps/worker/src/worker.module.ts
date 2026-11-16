@@ -12,9 +12,22 @@ import { createVaultOpener, parseMasterPrivateKeys } from '@ponctua/vault/open';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { type DestinationStream, type Logger, pino } from 'pino';
-import { PUBLISH_QUEUE, type PublishJobData } from './common/queues.js';
-import { DB, LOGGER, PUBLISH_QUEUE_CLIENT, VALKEY } from './common/tokens.js';
+import {
+  EVENTS_QUEUE,
+  PUBLISH_QUEUE,
+  type PublishJobData,
+  RECONCILE_QUEUE,
+} from './common/queues.js';
+import {
+  DB,
+  EVENTS_QUEUE_CLIENT,
+  LOGGER,
+  PUBLISH_QUEUE_CLIENT,
+  RECONCILE_QUEUE_CLIENT,
+  VALKEY,
+} from './common/tokens.js';
 import { ENV, type Env } from './config/env.js';
+import { EventsProcessor } from './events/events.processor.js';
 import { InstagramPublishHandler } from './publish/instagram-publish.handler.js';
 import {
   NoAdapterPublishHandler,
@@ -23,6 +36,7 @@ import {
   RoutingPublishHandler,
 } from './publish/publish-handler.js';
 import { PublishProcessor } from './publish/publish.processor.js';
+import { ReconcileProcessor } from './publish/reconcile.processor.js';
 import { LeaderLock } from './scheduler/leader-lock.js';
 import { SchedulerService } from './scheduler/scheduler.service.js';
 
@@ -63,10 +77,14 @@ class ConnectionsLifecycle implements OnApplicationShutdown {
 
 @Injectable()
 class QueueLifecycle implements OnApplicationShutdown {
-  constructor(@Inject(PUBLISH_QUEUE_CLIENT) private readonly queue: Queue) {}
+  constructor(
+    @Inject(PUBLISH_QUEUE_CLIENT) private readonly publish: Queue,
+    @Inject(RECONCILE_QUEUE_CLIENT) private readonly reconcile: Queue,
+    @Inject(EVENTS_QUEUE_CLIENT) private readonly events: Queue,
+  ) {}
 
   async onApplicationShutdown(): Promise<void> {
-    await this.queue.close();
+    await Promise.all([this.publish.close(), this.reconcile.close(), this.events.close()]);
   }
 }
 
@@ -106,6 +124,21 @@ export class WorkerModule {
               prefix: env.QUEUE_PREFIX,
             }),
         },
+        {
+          provide: RECONCILE_QUEUE_CLIENT,
+          inject: [VALKEY],
+          useFactory: (valkey: Redis) =>
+            new Queue(RECONCILE_QUEUE, {
+              connection: valkey.duplicate(),
+              prefix: env.QUEUE_PREFIX,
+            }),
+        },
+        {
+          provide: EVENTS_QUEUE_CLIENT,
+          inject: [VALKEY],
+          useFactory: (valkey: Redis) =>
+            new Queue(EVENTS_QUEUE, { connection: valkey.duplicate(), prefix: env.QUEUE_PREFIX }),
+        },
         QueueLifecycle,
         {
           provide: LeaderLock,
@@ -126,6 +159,8 @@ export class WorkerModule {
             options.publishHandler ?? createPublishHandler(env, db, options.graphFetch),
         },
         PublishProcessor,
+        ReconcileProcessor,
+        EventsProcessor,
       );
     }
 
