@@ -1,7 +1,14 @@
-import { postPageSchema } from '@ponctua/contracts';
+import {
+  postPageSchema,
+  publicationTargetListSchema,
+  type SocialAccountDto,
+  socialAccountListSchema,
+} from '@ponctua/contracts';
 import { Button, Card, CardContent } from '@ponctua/ui';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PostTargets, TARGETS_QUERY_KEY } from '../components/post-targets';
 import { apiGet } from '../lib/api';
 import { useSession } from '../lib/session';
 
@@ -32,6 +39,33 @@ export function PostsPage() {
     timeStyle: 'short',
   });
   const items = posts.data?.pages.flatMap((page) => page.items) ?? [];
+  const postIds = items.map((post) => post.id);
+
+  // Where each shown post goes, and how far it got (one request for the whole page).
+  const targets = useQuery({
+    queryKey: [TARGETS_QUERY_KEY, organizationId, postIds],
+    enabled: organizationId !== null && postIds.length > 0,
+    queryFn: ({ signal }) =>
+      apiGet(
+        `/publication-targets?${postIds.map((id) => `postId=${id}`).join('&')}`,
+        publicationTargetListSchema,
+        organizationId ?? '',
+        signal,
+      ),
+  });
+  // Same query as the accounts page: names and platforms for the target lines.
+  const accounts = useQuery({
+    queryKey: ['social-accounts', organizationId],
+    enabled: organizationId !== null && postIds.length > 0,
+    queryFn: ({ signal }) =>
+      apiGet('/social-accounts', socialAccountListSchema, organizationId ?? '', signal),
+  });
+  const accountsById = useMemo(
+    () => new Map<string, SocialAccountDto>((accounts.data?.items ?? []).map((a) => [a.id, a])),
+    [accounts.data],
+  );
+  const targetsOf = (postId: string) =>
+    (targets.data?.items ?? []).filter((target) => target.postId === postId);
 
   return (
     <>
@@ -65,6 +99,7 @@ export function PostsPage() {
                       {t('posts.updatedAt', { date: dateFormat.format(new Date(post.updatedAt)) })}
                     </time>
                   </p>
+                  <PostTargets targets={targetsOf(post.id)} accounts={accountsById} />
                 </CardContent>
               </Card>
             </li>

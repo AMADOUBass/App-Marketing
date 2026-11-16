@@ -16,6 +16,8 @@ export interface ProblemDetails {
   status: number;
   detail?: string;
   instance?: string;
+  /** Extension member (RFC 9457 section 3.2): codes of what to fix, for 4xx validation problems. */
+  issues?: unknown[];
 }
 
 export const PROBLEM_JSON = 'application/problem+json';
@@ -50,6 +52,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       status,
       ...(detail ? { detail } : {}),
       instance: path,
+      ...(status < 500 ? clientIssues(exception) : {}),
     };
 
     void reply.status(status).header('content-type', PROBLEM_JSON).send(problem);
@@ -64,4 +67,13 @@ function clientDetail(exception: unknown): string | undefined {
   if (typeof message === 'string') return message;
   if (Array.isArray(message)) return message.filter((m) => typeof m === 'string').join('; ');
   return undefined;
+}
+
+/** Only the "issues" member is passed through, and only when an exception sets it on purpose. */
+function clientIssues(exception: unknown): { issues?: unknown[] } {
+  if (!(exception instanceof HttpException)) return {};
+  const response = exception.getResponse();
+  if (typeof response !== 'object') return {};
+  const issues = (response as { issues?: unknown }).issues;
+  return Array.isArray(issues) ? { issues } : {};
 }

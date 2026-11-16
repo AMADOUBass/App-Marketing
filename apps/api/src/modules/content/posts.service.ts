@@ -1,7 +1,15 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { ListPostsQuery, PostDto, PostPage, UpdatePostInput } from '@ponctua/contracts';
+import type {
+  CreatePostInput,
+  ListPostsQuery,
+  PostDto,
+  PostPage,
+  UpdatePostInput,
+} from '@ponctua/contracts';
+import type { IdempotentResult } from '@ponctua/db';
 import type { Db, Post } from '@ponctua/db';
 import { DB } from '../../common/db.module.js';
+import { idempotentRequest } from '../../common/idempotency.js';
 
 // Same message whether the post does not exist or belongs to another organization:
 // the API must not reveal that an id exists elsewhere.
@@ -12,6 +20,7 @@ function toDto(post: Post): PostDto {
     id: post.id,
     workspaceId: post.workspaceId,
     body: post.body,
+    imageUrl: post.imageUrl,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
   };
@@ -37,6 +46,34 @@ export class PostsService {
       items: page.map(toDto),
       nextCursor: rows.length > query.limit && last ? last.id : null,
     };
+  }
+
+  /**
+   * Creates a post in one of the organization's workspaces, once per Idempotency-Key. A workspace of
+   * another organization is invisible (RLS): same 404 as a workspace that does not exist.
+   */
+  create(
+    organizationId: string,
+    input: CreatePostInput,
+    idempotencyKey: string,
+  ): Promise<IdempotentResult<PostDto>> {
+    return this.db.idempotent(
+      organizationId,
+      idempotentRequest(idempotencyKey, 'POST /posts', input),
+      async (tx) => {
+        const workspace = await tx.workspace.findUnique({ where: { id: input.workspaceId } });
+        if (!workspace) throw new NotFoundException('Workspace not found');
+        const post = await tx.post.create({
+          data: {
+            organizationId,
+            workspaceId: workspace.id,
+            body: input.body,
+            imageUrl: input.imageUrl ?? null,
+          },
+        });
+        return { status: 201, body: toDto(post) };
+      },
+    );
   }
 
   async get(organizationId: string, id: string): Promise<PostDto> {

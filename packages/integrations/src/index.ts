@@ -12,6 +12,11 @@ export type {
   ValidationIssue,
 } from './core/types.js';
 export { RETRYABLE_ERROR_CLASSES } from './core/types.js';
+export {
+  checkDraftForPlatform,
+  type PostDraft,
+  PUBLISHABLE_PLATFORMS,
+} from './core/draft-check.js';
 export { createInstagramAdapter, type InstagramAdapterOptions } from './instagram/adapter.js';
 export { classifyInstagramError } from './instagram/errors.js';
 export {

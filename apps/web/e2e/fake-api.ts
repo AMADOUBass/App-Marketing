@@ -4,7 +4,15 @@ interface FakeOrganization {
   organizationId: string;
   name: string;
   role: 'owner' | 'admin' | 'member';
-  posts: string[];
+  /** A post's body, or a post with where it goes (one Instagram account per organization). */
+  posts: (string | { body: string; targetStates: string[] })[];
+}
+
+interface FakeTarget {
+  id: string;
+  postId: string;
+  socialAccountId: string;
+  state: string;
 }
 
 interface FakeUser {
@@ -46,6 +54,31 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
   /** Password checked, code still expected (Better Auth's short-lived 2FA cookie). */
   let pendingTwoFactor: FakeUser | null = null;
   const organizationHeaders: string[] = [];
+  // Stable ids, so posts and their targets match across requests.
+  const postsByOrg = new Map<string, { id: string; body: string }[]>();
+  const targets: FakeTarget[] = [];
+  const accountOf = (organizationId: string) => `${organizationId.slice(0, 24)}000000000301`;
+  for (const account of accounts) {
+    for (const organization of account.organizations) {
+      postsByOrg.set(
+        organization.organizationId,
+        organization.posts.map((post) => {
+          const id = nextId();
+          const { body, targetStates } =
+            typeof post === 'string' ? { body: post, targetStates: [] } : post;
+          for (const state of targetStates) {
+            targets.push({
+              id: nextId(),
+              postId: id,
+              socialAccountId: accountOf(organization.organizationId),
+              state,
+            });
+          }
+          return { id, body };
+        }),
+      );
+    }
+  }
   /** Reset links "emailed" so far: token -> account. */
   const resetTokens = new Map<string, FakeUser>();
 
@@ -179,14 +212,52 @@ export async function installFakeApi(page: Page, users: Omit<FakeUser, 'id'>[] =
     if (path === '/api/v1/posts') {
       const date = '2026-11-10T14:30:00.000Z';
       return json(route, 200, {
-        items: organization.posts.map((body) => ({
-          id: nextId(),
+        items: (postsByOrg.get(organizationId) ?? []).map(({ id, body }) => ({
+          id,
           workspaceId: nextId(),
           body,
+          imageUrl: null,
           createdAt: date,
           updatedAt: date,
         })),
         nextCursor: null,
+      });
+    }
+    if (path === '/api/v1/publication-targets') {
+      const postIds = new URL(request.url()).searchParams.getAll('postId');
+      return json(route, 200, {
+        items: targets
+          .filter((t) => postIds.includes(t.postId))
+          .map((t) => ({
+            ...t,
+            scheduledAt: '2026-11-20T19:30:00.000Z',
+            updatedAt: '2026-11-16T10:00:00.000Z',
+          })),
+      });
+    }
+    const cancel = /^\/api\/v1\/publication-targets\/([^/]+)\/cancel$/.exec(path);
+    if (cancel && request.method() === 'POST') {
+      const found = targets.find((t) => t.id === cancel[1]);
+      if (!found) return json(route, 404, problem(404, 'Not Found'));
+      found.state = 'cancelled';
+      return json(route, 200, {
+        ...found,
+        scheduledAt: null,
+        updatedAt: '2026-11-16T10:00:00.000Z',
+      });
+    }
+    if (path === '/api/v1/social-accounts') {
+      return json(route, 200, {
+        items: [
+          {
+            id: accountOf(organizationId),
+            workspaceId: nextId(),
+            platform: 'instagram',
+            displayName: 'demo',
+            externalAccountId: '17841400000000000',
+            connected: true,
+          },
+        ],
       });
     }
     return json(route, 404, problem(404, 'Not Found'));

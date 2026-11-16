@@ -244,5 +244,38 @@
     "removed": "Passkey removed. A confirmation email was sent to you.",
     "signInAgain": "Sign in again",
     "signIn": "Sign in with a passkey"
+  },
+  "platforms": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "threads": "Threads",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "tiktok": "TikTok"
+  },
+  "targets": {
+    "listLabel": "Publishing accounts",
+    "where": "{{platform}} · {{name}}",
+    "unknownAccount": "Removed account",
+    "at": "on {{date}}",
+    "cancel": "Cancel",
+    "cancelNamed": "Cancel publishing on {{where}}",
+    "cancelError": "Could not cancel: publishing may already be under way.",
+    "states": {
+      "draft": "Draft",
+      "pending_approval": "Waiting for approval",
+      "scheduled": "Scheduled",
+      "queued": "About to go",
+      "publishing": "Publishing",
+      "uploading": "Uploading media",
+      "remote_processing": "Processed by the platform",
+      "published": "Published",
+      "retrying": "Retry planned",
+      "failed": "Failed",
+      "needs_action": "Action needed",
+      "unknown_outcome": "Result to check",
+      "reconciled": "Checked",
+      "cancelled": "Cancelled"
+    }
   }
 }

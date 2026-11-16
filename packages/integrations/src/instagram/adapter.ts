@@ -46,7 +46,8 @@ export interface InstagramAdapterOptions {
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-const PRIVATE_HOST =
+/** Hosts a platform cannot download from (local network, loopback). Shared with the draft check. */
+export const PRIVATE_HOST =
   /^(localhost|.*\.local|.*\.internal|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|\[::1\]|0\.0\.0\.0)$/i;
 
 function describe(error: unknown): string {

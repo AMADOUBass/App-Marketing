@@ -48,6 +48,17 @@ export interface Db {
   directory: {
     listOrganizations(userId: string): Promise<UserOrganization[]>;
   };
+  /**
+   * Runs a create request at most once per Idempotency-Key (CLAUDE.md section 8, ADR 012).
+   * The key is inserted first (INSERT ... ON CONFLICT DO NOTHING): a concurrent request with the same
+   * key waits for this transaction, then replays its answer. `work` runs in the same transaction as
+   * the stored answer: if it throws, nothing is stored and the key can be used again.
+   */
+  idempotent<T>(
+    organizationId: string,
+    request: IdempotentRequest,
+    work: (tx: TenantTx) => Promise<{ status: number; body: T }>,
+  ): Promise<IdempotentResult<T>>;
   /** Readiness check: resolves if the database answers within `timeoutMs`. Touches no table. */
   ping(timeoutMs?: number): Promise<void>;
   /**
@@ -64,6 +75,23 @@ export interface Db {
   };
   disconnect(): Promise<void>;
 }
+
+export interface IdempotentRequest {
+  /** Client-generated key (Idempotency-Key header). */
+  key: string;
+  /** The endpoint, e.g. "POST /posts": a key cannot be reused for another operation. */
+  operation: string;
+  /** Hash of operation + input: same key, different request -> refused. */
+  requestHash: string;
+  /** How long the answer is kept for replays. */
+  ttlSeconds: number;
+}
+
+export type IdempotentResult<T> =
+  | { outcome: 'executed'; status: number; body: T }
+  | { outcome: 'replayed'; status: number; body: unknown }
+  /** The key was already used for another request (different operation or input). */
+  | { outcome: 'mismatch' };
 
 export interface UserOrganization {
   organizationId: string;
@@ -181,6 +209,50 @@ export function createDb(options: DbOptions): Db {
         return rows.map(toDispatchItem);
       },
     },
+    idempotent: <T>(
+      organizationId: string,
+      request: IdempotentRequest,
+      work: (tx: TenantTx) => Promise<{ status: number; body: T }>,
+    ): Promise<IdempotentResult<T>> =>
+      withTenant(organizationId, async (tx) => {
+        // An expired key is forgotten, so the client may reuse it.
+        await tx.idempotencyKey.deleteMany({
+          where: { key: request.key, expiresAt: { lt: new Date() } },
+        });
+        const expiresAt = new Date(Date.now() + request.ttlSeconds * 1000);
+        const inserted = await tx.$queryRaw<{ id: string }[]>`
+          INSERT INTO idempotency_keys (organization_id, key, operation, request_hash, expires_at)
+          VALUES (${organizationId}::uuid, ${request.key}, ${request.operation}, ${request.requestHash}, ${expiresAt})
+          ON CONFLICT (organization_id, key) DO NOTHING
+          RETURNING id`;
+        const [row] = inserted;
+        if (!row) {
+          const existing = await tx.idempotencyKey.findUniqueOrThrow({
+            where: { organizationId_key: { organizationId, key: request.key } },
+          });
+          if (
+            existing.operation !== request.operation ||
+            existing.requestHash !== request.requestHash ||
+            existing.responseStatus === null
+          ) {
+            return { outcome: 'mismatch' };
+          }
+          return {
+            outcome: 'replayed',
+            status: existing.responseStatus,
+            body: existing.responseBody,
+          };
+        }
+        const result = await work(tx);
+        await tx.idempotencyKey.update({
+          where: { id: row.id },
+          data: {
+            responseStatus: result.status,
+            responseBody: result.body as Prisma.InputJsonValue,
+          },
+        });
+        return { outcome: 'executed', status: result.status, body: result.body };
+      }),
     disconnect: () => prisma.$disconnect(),
   };
 }

@@ -296,7 +296,14 @@ pnpm e2e            # Playwright + axe (apps/web, API simulée) — 1re fois : p
 
 **Auth et multi-tenancy : terminé le 2026-11-16.** Restent pour plus tard : invitations et gestion des membres, 2FA obligatoire par organisation, rotation de `BETTER_AUTH_SECRET` (ADR 010).
 
-**Ensuite (ordre du MVP)** : moteur de publication + adaptateurs Meta →
+**MVP en cours — moteur de publication + adaptateurs Meta** :
+
+- [x] 4a. API de programmation (`POST /posts`, `/posts/:id/schedule`, annulation, états) avec `Idempotency-Key` (table `idempotency_keys`, rejeu, 422 si réutilisée) ; états visibles sur la liste des posts (ADR 012)
+- [ ] 4b. Fiabilité du worker : reprises (backoff + gigue), réconciliation, contrôle 15 min avant, limiteur Valkey, outbox (ADR 013)
+- [ ] 4c. Adaptateur Facebook (Pages) (ADR 014)
+- [ ] 4d. Adaptateur Threads + rafraîchissement des jetons (ADR 015)
+
+**Ensuite (ordre du MVP)** :
 composer, variantes, vérificateur, médiathèque, calendrier → liens de validation client → YouTube, LinkedIn, TikTok → entitlements.
 
 **En parallèle, hors code** : nom du produit, entreprise enregistrée, domaine, politique de confidentialité,

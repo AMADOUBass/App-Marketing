@@ -244,5 +244,38 @@
     "removed": "Passkey supprimée. Un courriel de confirmation vous a été envoyé.",
     "signInAgain": "Se reconnecter",
     "signIn": "Se connecter avec une passkey"
+  },
+  "platforms": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "threads": "Threads",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "tiktok": "TikTok"
+  },
+  "targets": {
+    "listLabel": "Comptes de publication",
+    "where": "{{platform}} · {{name}}",
+    "unknownAccount": "Compte supprimé",
+    "at": "le {{date}}",
+    "cancel": "Annuler",
+    "cancelNamed": "Annuler la publication sur {{where}}",
+    "cancelError": "Impossible d’annuler : la publication est peut-être déjà en cours.",
+    "states": {
+      "draft": "Brouillon",
+      "pending_approval": "En attente de validation",
+      "scheduled": "Programmé",
+      "queued": "Sur le point de partir",
+      "publishing": "Publication en cours",
+      "uploading": "Envoi du média",
+      "remote_processing": "Traitement par la plateforme",
+      "published": "Publié",
+      "retrying": "Nouvel essai prévu",
+      "failed": "Échec",
+      "needs_action": "Action requise",
+      "unknown_outcome": "Résultat à vérifier",
+      "reconciled": "Vérifié",
+      "cancelled": "Annulé"
+    }
   }
 }

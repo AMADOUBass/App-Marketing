@@ -40,6 +40,7 @@ model Organization {
   publishAttempts    PublishAttempt[]
   key                OrganizationKey?
   oauthCredentials   OauthCredential[]
+  idempotencyKeys    IdempotencyKey[]
 
   @@map("organizations")
   @@schema("public")
@@ -266,6 +267,32 @@ model PublishAttempt {
   @@unique([organizationId, id])
   @@unique([targetId, attemptNo])
   @@map("publish_attempts")
+  @@schema("public")
+}
+
+/// Idempotency-Key of a create request (CLAUDE.md section 8): a retried request with the same key gets
+/// the first response again instead of creating a second post or schedule. Written in the same
+/// transaction as the business change, so a key is stored only if the change happened (ADR 012).
+model IdempotencyKey {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  key            String
+  /// The endpoint the key was first used with (a key cannot be reused for another operation).
+  operation      String
+  /// SHA-256 of the operation and its input: same key with a different request is refused.
+  requestHash    String   @map("request_hash")
+  /// Null only inside the transaction that runs the request (never visible to another one).
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
   @@schema("public")
 }
 

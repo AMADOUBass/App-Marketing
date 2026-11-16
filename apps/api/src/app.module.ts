@@ -13,6 +13,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import type { Mailer } from './modules/identity/mailer.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
+import { SchedulingModule } from './modules/scheduling/scheduling.module.js';
 import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 
 export interface AppModuleOptions {
@@ -38,6 +39,7 @@ export class AppModule {
         HealthModule,
         ContentModule,
         IntegrationsModule.register(options.graphFetch),
+        SchedulingModule,
       ],
       providers: [
         { provide: ENV, useValue: env },

@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import {
+  type CreatePostInput,
+  createPostSchema,
   type ListPostsQuery,
   listPostsQuerySchema,
   type PostDto,
@@ -8,6 +10,8 @@ import {
   type UpdatePostInput,
   updatePostSchema,
 } from '@ponctua/contracts';
+import type { FastifyReply } from 'fastify';
+import { IdempotencyKey, sendIdempotent } from '../../common/idempotency.js';
 import { OrganizationId } from '../../common/tenant.js';
 import { PostsService } from './posts.service.js';
 
@@ -21,6 +25,17 @@ export class PostsController {
     @Query({ schema: listPostsQuerySchema }) query: ListPostsQuery,
   ): Promise<PostPage> {
     return this.posts.list(organizationId, query);
+  }
+
+  /** 201 with the post; the same Idempotency-Key replays it (Idempotent-Replayed: true). */
+  @Post()
+  async create(
+    @OrganizationId() organizationId: string,
+    @IdempotencyKey() idempotencyKey: string,
+    @Body({ schema: createPostSchema }) input: CreatePostInput,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<PostDto> {
+    return sendIdempotent(reply, await this.posts.create(organizationId, input, idempotencyKey));
   }
 
   @Get(':id')

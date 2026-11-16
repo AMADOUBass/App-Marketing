@@ -9,6 +9,8 @@ export const postSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
   body: z.string(),
+  /** Phase 0 media (ADR 007): one public image URL, until the media library. */
+  imageUrl: z.url().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -32,3 +34,11 @@ export const updatePostSchema = z.strictObject({
   body: z.string().trim().min(1).max(POST_BODY_MAX_LENGTH),
 });
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
+
+/** POST /posts (Idempotency-Key required). The workspace must belong to the organization. */
+export const createPostSchema = z.strictObject({
+  workspaceId: z.uuid(),
+  body: z.string().trim().min(1).max(POST_BODY_MAX_LENGTH),
+  imageUrl: z.url({ protocol: /^https$/ }).optional(),
+});
+export type CreatePostInput = z.infer<typeof createPostSchema>;

@@ -70,6 +70,7 @@ export function post(body: string, index = 0) {
     id: crypto.randomUUID(),
     workspaceId: crypto.randomUUID(),
     body,
+    imageUrl: null,
     createdAt: date,
     updatedAt: date,
   };
